@@ -9,25 +9,34 @@ cmake_minimum_required(VERSION 3.18.1)
 
 project("ffmpegdemo")
 
-# Creates and names a library, sets it as either STATIC
-# or SHARED, and provides the relative paths to its source code.
-# You can define multiple libraries, and CMake builds them for you.
-# Gradle automatically packages shared libraries with your APK.
+#set(CMAKE_VERBOSE_MAKEFILE on)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
-add_library( # Sets the name of the library.
-        ffmpegdemo
+set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../cmakeLibs)
 
-        # Sets the library as a shared library.
-        SHARED
+#message(${ffmpeg_dir})
 
-        # Provides a relative path to your source file(s).
-        native-lib.cpp)
+set(ffmpeg_libs ${ffmpeg_dir}/${ANDROID_ABI})
+include_directories(include/${ANDROID_ABI})
 
-# Searches for a specified prebuilt library and stores the path as a
-# variable. Because CMake includes system libraries in the search path by
-# default, you only need to specify the name of the public NDK library
-# you want to add. CMake verifies that the library exists before
-# completing its build.
+
+set(
+        # List variable name
+        ffmpeg_libs_names
+        # Values in the list
+        avutil avformat avcodec swscale swresample avdevice avfilter)
+
+foreach (ffmpeg_lib_name ${ffmpeg_libs_names})
+    add_library(
+            ${ffmpeg_lib_name}
+            SHARED
+            IMPORTED)
+    set_target_properties(
+            ${ffmpeg_lib_name}
+            PROPERTIES
+            IMPORTED_LOCATION
+            ${ffmpeg_libs}/lib${ffmpeg_lib_name}.so)
+endforeach ()
 
 find_library( # Sets the name of the path variable.
         log-lib
@@ -36,13 +45,29 @@ find_library( # Sets the name of the path variable.
         # you want CMake to locate.
         log)
 
-# Specifies libraries CMake should link to your target library. You
-# can link multiple libraries, such as libraries you define in this
-# build script, prebuilt third-party libraries, or system libraries.
-
-target_link_libraries( # Specifies the target library.
+add_library(
+        # Name for a library to build
         ffmpegdemo
+        # Type of a library
+        SHARED
+        # All cpp files to compile
+        native-lib.cpp)
 
-        # Links the target library to the log library
-        # included in the NDK.
-        ${log-lib})
+target_link_libraries(
+        # Library to link
+        ffmpegdemo
+        # List of libraries to link against:
+        # Library for writing messages in LogCat
+        ${log-lib}
+
+        avutil       #工具库(大部分需要)
+        swresample    #音频采样数据格式转换
+        avcodec      #编解码(重要)
+        avfilter      #滤镜特效处理
+        swscale       #视频像素数据格式转换
+        avdevice     #各种设备的输入输出
+        avformat     #封装格式处理
+        # postproc     #后加工
+
+        # FFmpeg libraries
+        ${ffmpeg_libs_names})
