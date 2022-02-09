@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.18.1)
 
 # Declares and names the project.
 
-project("ffmpegdemo")
+project("ffmpeglib")
 
 
 set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../cmakeLibs)
@@ -41,15 +41,16 @@ find_library( # Sets the name of the path variable.
 
 add_library(
         # Name for a library to build
-        ffmpegdemo
+        ffmpeglib
         # Type of a library
         SHARED
         # All cpp files to compile
-        native-lib.cpp)
+        ffmpeglib.cpp
+        video_player.cpp)
 
 target_link_libraries(
         # Library to link
-        ffmpegdemo
+        ffmpeglib
         # List of libraries to link against:
         # Library for writing messages in LogCat
         ${log-lib}

@@ -5,24 +5,15 @@ import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
+import com.chadlin.ffmpeglib.FFmpegVideoManager;
 
-    // Used to load the 'ffmpegdemo' library on application startup.
-    static {
-        System.loadLibrary("ffmpegdemo");
-    }
+public class MainActivity extends AppCompatActivity {
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.e("dsads", stringFromJNI());
+        Log.e("dsads", FFmpegVideoManager.getInstance().stringFromJNI());
 
     }
-
-    /**
-     * A native method that is implemented by the 'ffmpegdemo' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
 }
