@@ -5,7 +5,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:padding="20dp"
     tools:context=".MainActivity">
+    <TextureView
+        android:layout_width="match_parent"
+        android:id="@+id/surface"
+        android:layout_marginBottom="20dp"
+        android:layout_height="200dp"/>
 
+    <TextView
+        android:layout_width="match_parent"
+        android:id="@+id/tv_test"
+        android:text="Test connection with FFmpeg"
+        android:textSize="16sp"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:background="@drawable/border"
+        android:textColor="@color/white"
+        android:layout_height="60dp" />
 
 </LinearLayout>

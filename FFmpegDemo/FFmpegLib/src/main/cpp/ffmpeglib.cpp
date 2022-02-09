@@ -6,7 +6,7 @@ extern "C" {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_chadlin_ffmpeglib_FFmpegVideoManager_stringFromJNI(
+Java_com_chadlin_ffmpeglib_FFmpegVideoManager_testConnection(
         JNIEnv* env,
         jobject /* this */) {
     std::string hello = avcodec_configuration();
