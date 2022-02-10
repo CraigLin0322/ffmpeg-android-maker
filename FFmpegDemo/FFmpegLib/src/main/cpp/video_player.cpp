@@ -2,6 +2,7 @@
 #include <android/native_window_jni.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "video_player.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,10 +20,44 @@ extern "C" {
 
 #define TAG "VideoPlayer"
 //https://www.jianshu.com/p/c7de148e951c
-float play_rate = 1;
-long duration = 0;
-
 //https://blog.csdn.net/JohanMan/article/details/83091706
+
+VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj) {
+    this->vm = vm;
+    this->env = env;
+    this->jobj = obj;
+    jclass jclazz = env->GetObjectClass(jobj);
+    if (!jclazz) {
+        LOGE(TAG, "Error on getting jclass");
+        return;
+    }
+    jmethodId = env->GetMethodID(jclazz, "onError", "(ILjava/lang/String;)V");
+    if (!jmethodId) {
+        LOGE(TAG, "Error on getting method");
+        return;
+    }
+}
+
+VideoPlayListener::~VideoPlayListener() {
+
+}
+
+void VideoPlayListener::onError(int type, int code, const char *msg) {
+    if (type == 0) {
+        jstring jmsg = env->NewStringUTF(msg);
+        env->CallVoidMethod(jobj, jmethodId, code, jmsg);
+        env->DeleteLocalRef(jmsg);
+    } else if (type == 1) {
+        JNIEnv *jniEnv;
+        vm->AttachCurrentThread(&jniEnv, 0);
+        jstring jmsg = jniEnv->NewStringUTF(msg);
+        jniEnv->CallVoidMethod(jobj, jmethodId, code, jmsg);
+        jniEnv->DeleteLocalRef(jmsg);
+
+        vm->DetachCurrentThread();
+    }
+}
+
 int play(JNIEnv *env, jstring path_, jobject surface) {
 
     // 记录结果
@@ -36,14 +71,14 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     // 打开视频文件
     result = avformat_open_input(&format_context, path, NULL, NULL);
     if (result < 0) {
-        LOGE("Player Error",": Can not open video file");
-        return STATUS_FAILURE;
+        LOGE(TAG, ": Can not open video file");
+        return STATUS_FAILURE
     }
     // 查找视频文件的流信息
     result = avformat_find_stream_info(format_context, NULL);
     if (result < 0) {
-        LOGE("Player Error"," : Can not find video file stream info");
-        return STATUS_FAILURE;
+        LOGE(TAG, " : Can not find video file stream info");
+        return STATUS_FAILURE
     }
     // 查找视频编码器
     int video_stream_index = -1;
@@ -55,22 +90,23 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     }
     // 没找到视频流
     if (video_stream_index == -1) {
-        LOGE("Player Error"," : Can not find video stream");
+        LOGE(TAG, " : Can not find video stream");
         return STATUS_FAILURE;
     }
     // 初始化视频编码器上下文
     AVCodecContext *video_codec_context = avcodec_alloc_context3(NULL);
-    avcodec_parameters_to_context(video_codec_context, format_context->streams[video_stream_index]->codecpar);
+    avcodec_parameters_to_context(video_codec_context,
+                                  format_context->streams[video_stream_index]->codecpar);
     // 初始化视频编码器
     AVCodec *video_codec = avcodec_find_decoder(video_codec_context->codec_id);
     if (video_codec == NULL) {
-        LOGE("Player Error"," : Can not find video codec");
+        LOGE(TAG, " : Can not find video codec");
         return STATUS_FAILURE;
     }
     // R3 打开视频解码器
-    result  = avcodec_open2(video_codec_context, video_codec, NULL);
+    result = avcodec_open2(video_codec_context, video_codec, NULL);
     if (result < 0) {
-        LOGE("Player Error",": Can not find video stream");
+        LOGE(TAG, ": Can not find video stream");
         return STATUS_FAILURE;
     }
     // 获取视频的宽高
@@ -79,14 +115,15 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     // R4 初始化 Native Window 用于播放视频
     ANativeWindow *native_window = ANativeWindow_fromSurface(env, surface);
     if (native_window == NULL) {
-        LOGE("Player Error"," : Can not create native window");
+        LOGE(TAG, " : Can not create native window");
         return STATUS_FAILURE;
     }
     // 通过设置宽高限制缓冲区中的像素数量，而非屏幕的物理显示尺寸。
     // 如果缓冲区与物理屏幕的显示尺寸不相符，则实际显示可能会是拉伸，或者被压缩的图像
-    result = ANativeWindow_setBuffersGeometry(native_window, videoWidth, videoHeight,WINDOW_FORMAT_RGBA_8888);
-    if (result < 0){
-        LOGE("Player Error"," : Can not set native window buffer");
+    result = ANativeWindow_setBuffersGeometry(native_window, videoWidth, videoHeight,
+                                              WINDOW_FORMAT_RGBA_8888);
+    if (result < 0) {
+        LOGE(TAG, " : Can not set native window buffer");
         ANativeWindow_release(native_window);
         return STATUS_FAILURE;
     }
@@ -104,7 +141,8 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_RGBA, videoWidth, videoHeight, 1);
     // R8 申请 Buffer 内存
     uint8_t *out_buffer = (uint8_t *) av_malloc(buffer_size * sizeof(uint8_t));
-    av_image_fill_arrays(rgba_frame->data, rgba_frame->linesize, out_buffer, AV_PIX_FMT_RGBA, videoWidth, videoHeight, 1);
+    av_image_fill_arrays(rgba_frame->data, rgba_frame->linesize, out_buffer, AV_PIX_FMT_RGBA,
+                         videoWidth, videoHeight, 1);
     // R9 数据格式转换上下文
     struct SwsContext *data_convert_context = sws_getContext(
             videoWidth, videoHeight, video_codec_context->pix_fmt,
@@ -117,28 +155,28 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
             // 解码
             result = avcodec_send_packet(video_codec_context, packet);
             if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
-                LOGE("Player Error"," : codec step 1 fail");
+                LOGE(TAG, " : codec step 1 fail");
                 return STATUS_FAILURE;
             }
             result = avcodec_receive_frame(video_codec_context, frame);
             if (result < 0 && result != AVERROR_EOF) {
-                LOGE("Player Error"," : codec step 2 fail");
+                LOGE(TAG, " : codec step 2 fail");
                 return STATUS_FAILURE;
             }
             // 数据格式转换
             result = sws_scale(
                     data_convert_context,
-                    (const uint8_t* const*) frame->data, frame->linesize,
+                    (const uint8_t *const *) frame->data, frame->linesize,
                     0, videoHeight,
                     rgba_frame->data, rgba_frame->linesize);
             if (result <= 0) {
-                LOGE("Player Error ",": data convert fail");
+                LOGE("Player Error ", ": data convert fail");
                 return STATUS_FAILURE;
             }
             // 播放
             result = ANativeWindow_lock(native_window, &window_buffer, NULL);
             if (result < 0) {
-                LOGE("Player Error"," : Can not lock native window");
+                LOGE(TAG, " : Can not lock native window");
             } else {
                 // 将图像绘制到界面上
                 // 注意 : 这里 rgba_frame 一行的像素和 window_buffer 一行的像素长度可能不一致

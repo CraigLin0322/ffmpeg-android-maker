@@ -27,10 +27,10 @@ public class FFmpegVideoManager {
 
 
     /**
-     * A native method that is implemented by the 'ffmpegdemo' native library,
+     * A native method that is implemented by the 'ffmpeglib' native library,
      * which is packaged with this application.
      */
     public native String testConnection();
 
-    public native boolean playLocalVideo(String localPath, Surface surface);
+    public native boolean playLocalVideo(String localPath, Surface surface, VideoPlayerCallback callback);
 }

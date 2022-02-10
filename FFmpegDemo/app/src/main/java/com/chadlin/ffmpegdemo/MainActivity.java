@@ -1,21 +1,21 @@
 package com.chadlin.ffmpegdemo;
 
+import com.chadlin.ffmpeglib.FFmpegVideoManager;
+import com.chadlin.ffmpeglib.VideoPlayerCallback;
+
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.List;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.chadlin.ffmpeglib.FFmpegVideoManager;
-
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
     private TextureView textureView;
@@ -45,10 +45,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Toast.makeText(this, FFmpegVideoManager.getInstance().testConnection(), Toast.LENGTH_SHORT).show();
                 break;
             case R.id.tv_play:
-                List<VideoItem> list = readVideoFromLocal();
-                VideoItem item = list.get(0);
-                FFmpegVideoManager.getInstance().playLocalVideo(item.path, new Surface(surface));
-                break;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        List<VideoItem> list = readVideoFromLocal();
+                        VideoItem item = list.get(0);
+                        FFmpegVideoManager.getInstance().playLocalVideo(item.path, new Surface(surface), new VideoPlayerCallback() {
+                            @Override
+                            public void onVideoStart() {
+
+                            }
+
+                            @Override
+                            public void onProgress(int total, int current) {
+
+                            }
+
+                            @Override
+                            public void onVideoStop() {
+
+                            }
+                        });
+
+                    }
+                }).start();
+                 break;
         }
     }
 
