@@ -1,6 +1,7 @@
 package com.chadlin.ffmpegdemo;
 
 import android.graphics.SurfaceTexture;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.TextureView;
@@ -8,13 +9,16 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.chadlin.ffmpeglib.FFmpegVideoManager;
 
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
     private TextureView textureView;
-
+    private LocalVideoDataSource localVideoDataSource;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,6 +27,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.tv_test).setOnClickListener(this);
         textureView = findViewById(R.id.surface);
         textureView.setSurfaceTextureListener(this);
+        localVideoDataSource = new LocalVideoDataSource(this);
+        readVideoFromLocal();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private void readVideoFromLocal() {
+        List<VideoItem> list = localVideoDataSource.queryData();
     }
 
     @Override
