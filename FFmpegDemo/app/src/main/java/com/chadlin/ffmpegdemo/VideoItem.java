@@ -4,13 +4,13 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 
 public class VideoItem {
-    private final Uri uri;
-    private final String name;
-    private final int duration;
-    private final int size;
-    private final Bitmap thumbnail;
-    private final int date;
-    private final String path;
+     final Uri uri;
+     final String name;
+     final int duration;
+     final int size;
+     final Bitmap thumbnail;
+     final int date;
+     final String path;
 
     public VideoItem(Uri uri, String path, String name, Bitmap thumbnail, int duration, int size, int date) {
         this.path = path;

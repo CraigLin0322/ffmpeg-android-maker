@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Toast;
@@ -19,21 +20,21 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
     private TextureView textureView;
     private LocalVideoDataSource localVideoDataSource;
+    private SurfaceTexture surface;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.e("dsads", FFmpegVideoManager.getInstance().testConnection());
         findViewById(R.id.tv_test).setOnClickListener(this);
+        findViewById(R.id.tv_play).setOnClickListener(this);
         textureView = findViewById(R.id.surface);
         textureView.setSurfaceTextureListener(this);
         localVideoDataSource = new LocalVideoDataSource(this);
-        readVideoFromLocal();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
-    private void readVideoFromLocal() {
-        List<VideoItem> list = localVideoDataSource.queryData();
+    private List<VideoItem> readVideoFromLocal() {
+        return localVideoDataSource.queryData();
     }
 
     @Override
@@ -43,12 +44,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.tv_test:
                 Toast.makeText(this, FFmpegVideoManager.getInstance().testConnection(), Toast.LENGTH_SHORT).show();
                 break;
+            case R.id.tv_play:
+                List<VideoItem> list = readVideoFromLocal();
+                VideoItem item = list.get(0);
+                FFmpegVideoManager.getInstance().playLocalVideo(item.path, new Surface(surface));
+                break;
         }
     }
 
     @Override
     public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-
+        this.surface = surface;
     }
 
     @Override

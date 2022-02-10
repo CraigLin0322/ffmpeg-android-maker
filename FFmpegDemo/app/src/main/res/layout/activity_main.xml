@@ -22,6 +22,18 @@
         android:gravity="center"
         android:background="@drawable/border"
         android:textColor="@color/white"
+        android:layout_marginBottom="20dp"
+        android:layout_height="60dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:id="@+id/tv_play"
+        android:text="Play Video"
+        android:textSize="16sp"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:background="@drawable/border"
+        android:textColor="@color/white"
         android:layout_height="60dp" />
 
 </LinearLayout>
