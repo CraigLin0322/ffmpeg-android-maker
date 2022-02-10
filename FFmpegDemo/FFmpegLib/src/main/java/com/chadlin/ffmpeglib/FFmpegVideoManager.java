@@ -1,5 +1,7 @@
 package com.chadlin.ffmpeglib;
 
+import android.view.Surface;
+
 public class FFmpegVideoManager {
 
     static {
@@ -29,4 +31,6 @@ public class FFmpegVideoManager {
      * which is packaged with this application.
      */
     public native String testConnection();
+
+    public native boolean playLocalVideo(String localPath, Surface surface);
 }

@@ -22,157 +22,149 @@ extern "C" {
 float play_rate = 1;
 long duration = 0;
 
-VIDEO_PLAYER_FUNC(jint, play, jstring
-filePath,
-jobject surface
-) {
+//https://blog.csdn.net/JohanMan/article/details/83091706
+int play(JNIEnv *env, jstring path, jobject surface) {
 
-const char *file_name = env->GetStringUTFChars(filePath, JNI_FALSE);
-LOGE(TAG, "open file:%s\n", file_name);
+    const char *nativePath = env->GetStringUTFChars(path, 0);
+    //Register all component
+    av_register_all();
 
-av_register_all();
+    // Encapsulate format into context
+    AVFormatContext *formatContext = avformat_alloc_context();
 
-AVFormatContext *pFormatCtx = avformat_alloc_context();
-if (
-avformat_open_input(&pFormatCtx, file_name, nullptr, nullptr
-) != 0) {
-LOGE(TAG, "Couldn't open file:%s\n", file_name);
-return -1;
-}
-if (
-avformat_find_stream_info(pFormatCtx, nullptr
-) < 0) {
-LOGE(TAG, "Couldn't find stream information.");
-return -1;
-}
-int videoStream = -1, i;
-for (
-i = 0;
-i<pFormatCtx->
-nb_streams;
-i++) {
-if (pFormatCtx->streams[i]->codecpar->codec_type ==
-AVMEDIA_TYPE_VIDEO
-        &&videoStream<
-0) {
-videoStream = i;
-}
-}
-if (videoStream == -1) {
-LOGE(TAG, "couldn't find a video stream.");
-return -1;
-}
+    int result = avformat_open_input(&formatContext, nativePath, NULL, NULL);
 
-//get duration of video
-if (pFormatCtx->duration != AV_NOPTS_VALUE) {
-duration = (long) (pFormatCtx->duration / AV_TIME_BASE);
-LOGE(TAG, "duration==%ld", duration);
-}
+    if (result < 0) {
+        LOGE(TAG, "Fail in opening video files");
+        return STATUS_FAILURE;
+    }
 
-AVCodecContext *pCodecCtx = pFormatCtx->streams[videoStream]->codec;
-AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
-if (pCodec == nullptr) {
-LOGE(TAG, "couldn't find Codec.");
-return -1;
-}
-if (
-avcodec_open2(pCodecCtx, pCodec, nullptr
-) < 0) {
-LOGE(TAG, "Couldn't open codec.");
-return -1;
-}
+    int video_stream_index = -1;
 
-ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
-int videoWidth = pCodecCtx->width;
-int videoHeight = pCodecCtx->height;
-ANativeWindow_setBuffersGeometry(nativeWindow, videoWidth, videoHeight,
-        WINDOW_FORMAT_RGBA_8888
-);
-ANativeWindow_Buffer windowBuffer;
-if (
-avcodec_open2(pCodecCtx, pCodec, nullptr
-) < 0) {
-LOGE(TAG, "Couldn't open codec.");
-return -1;
-}
-AVFrame *pFrame = av_frame_alloc();
-AVFrame *pFrameRGBA = av_frame_alloc();
-if (pFrameRGBA == nullptr || pFrame == nullptr) {
-LOGE(TAG, "Couldn't allocate video frame.");
-return -1;
-}
-int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, pCodecCtx->width, pCodecCtx->height,
-                                        1);
+    for (int i = 0; i < formatContext->nb_streams; ++i) {
+        // Find if this streams meet the video requirement
+        if (formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_index = i;
+        }
+    }
+    if (video_stream_index == -1) {
+        LOGE(TAG, "This video files is not supported");
+        return STATUS_FAILURE;
+    }
 
-uint8_t *buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
-av_image_fill_arrays(pFrameRGBA
-->data, pFrameRGBA->linesize, buffer, AV_PIX_FMT_RGBA,
-pCodecCtx->width, pCodecCtx->height, 1);
+    //Initialize video codec context
+    AVCodecContext *avCodecContext = avcodec_alloc_context3(NULL);
+    avcodec_parameters_to_context(avCodecContext,
+                                  formatContext->streams[video_stream_index]->codecpar);
 
-struct SwsContext *sws_ctx = sws_getContext(pCodecCtx->width,
-                                            pCodecCtx->height,
-                                            pCodecCtx->pix_fmt,
-                                            pCodecCtx->width,
-                                            pCodecCtx->height,
-                                            AV_PIX_FMT_RGBA,
-                                            SWS_BILINEAR,
-                                            nullptr,
-                                            nullptr,
-                                            nullptr);
+    //Initialize video codec
+    AVCodec *video_codec = avcodec_find_decoder(avCodecContext->codec_id);
 
-int frameFinished;
-AVPacket packet;
+    if (video_codec == NULL) {
+        LOGE(TAG, "Error in finding video codec");
+        return STATUS_FAILURE;
+    }
 
-while (
-av_read_frame(pFormatCtx, &packet
-) >= 0) {
-if (packet.stream_index == videoStream) {
-avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet
-);
-if (frameFinished) {
-// lock native window
-ANativeWindow_lock(nativeWindow, &windowBuffer,
-0);
-sws_scale(sws_ctx, (uint8_t
-const *const *) pFrame->data,
-pFrame->linesize, 0, pCodecCtx->height,
-pFrameRGBA->data, pFrameRGBA->linesize);
-uint8_t *dst = static_cast<uint8_t *>(windowBuffer.bits);
-int dstStride = windowBuffer.stride * 4;
-uint8_t *src = pFrameRGBA->data[0];
-int srcStride = pFrameRGBA->linesize[0];
-int h;
-for (
-h = 0;
-h<videoHeight;
-h++) {
-memcpy(dst
-+
-h *dstStride, src
-+
-h *srcStride, (size_t)
-srcStride);
-}
-ANativeWindow_unlockAndPost(nativeWindow);
-}
-usleep((unsigned long) (1000 * 40 * play_rate));
-}
-av_packet_unref(&packet);
-}
-av_free(buffer);
-av_free(pFrameRGBA);
-av_free(pFrame);
-avcodec_free_context(&pCodecCtx);
-avformat_close_input(&pFormatCtx);
-return 0;
-}
+    result = avcodec_open2(avCodecContext, video_codec, NULL);
 
-VIDEO_PLAYER_FUNC(void, setPlayRate, jfloat playRate) {
-    play_rate = playRate;
-}
+    if (result < 0) {
+        LOGE(TAG, "Error in opening codec");
+        return STATUS_FAILURE;
+    }
 
-VIDEO_PLAYER_FUNC(jint, getDuration
-) {
-return
-duration;
-}
+    int videoWidth = avCodecContext->width;
+    int videoHeight = avCodecContext->height;
+    ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
+
+    if (nativeWindow == NULL) {
+        LOGE(TAG, "Fail in creating ANativeWindow");
+        return STATUS_FAILURE;
+    }
+
+    result = ANativeWindow_setBuffersGeometry(nativeWindow, videoWidth, videoHeight,
+                                              WINDOW_FORMAT_RGBA_8888);
+    if (result < 0) {
+        LOGE(TAG, "Fail in setting Buffer Geometry for ANativeWindow");
+        ANativeWindow_release(nativeWindow);
+        return STATUS_FAILURE;
+    }
+
+    ANativeWindow_Buffer windowBuffer;
+
+    AVPacket *packet = av_packet_alloc();
+
+    AVFrame *frame = av_frame_alloc();
+
+    AVFrame *rgba_frame = av_frame_alloc();
+
+    int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_RGBA, videoWidth, videoHeight, 1);
+
+    uint8_t *out_buffer = (uint8_t *) av_malloc(buffer_size * sizeof(uint8_t));
+
+    struct SwsContext *data_convert_context = sws_getContext(videoWidth, videoHeight,
+                                                             avCodecContext->pix_fmt, videoWidth,
+                                                             videoHeight,
+                                                             AV_PIX_FMT_RGBA, SWS_BICUBIC, NULL,
+                                                             NULL, NULL);
+    //Read frame
+    while (av_read_frame(formatContext, packet) >= 0) {
+        if (packet->stream_index == video_stream_index) {
+            //decode
+            result = avcodec_send_packet(avCodecContext, packet);
+            if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
+                LOGE(TAG, "Send packet fails");
+                return STATUS_FAILURE;
+            }
+            result = avcodec_receive_frame(avCodecContext, frame);
+            if (result < 0 && result != AVERROR_EOF) {
+                LOGE(TAG, "Error in receiving frame");
+                return STATUS_FAILURE;
+            }
+            // Convert data format
+            result = sws_scale(data_convert_context, (const uint8_t *const *) frame->data,
+                               frame->linesize,
+                               0, videoHeight, rgba_frame->data, rgba_frame->linesize);
+            if (result <= 0) {
+                LOGE(TAG, "Error in converting data");
+                return STATUS_FAILURE;
+            }
+
+            result = ANativeWindow_lock(nativeWindow, &windowBuffer, NULL);
+
+            if (result < 0) {
+                LOGE(TAG, "Cannot lock native window");
+            } else {
+                uint8_t *bits = (uint8_t *) windowBuffer.bits;
+                for (int h = 0; h < videoHeight; ++h) {
+                    memcpy(bits + h * windowBuffer.stride * 4,
+                           out_buffer + h * rgba_frame->linesize[0],
+                           rgba_frame->linesize[0]);
+                }
+                ANativeWindow_unlockAndPost(nativeWindow);
+            }
+
+        }
+
+        av_packet_unref(packet);
+    }
+
+    sws_freeContext(data_convert_context);
+
+    av_free(out_buffer);
+
+    av_frame_free(&rgba_frame);
+
+    av_frame_free(&frame);
+
+    av_packet_free(&packet);
+
+    ANativeWindow_release(nativeWindow);
+
+    avcodec_close(avCodecContext);
+
+    avformat_close_input(&formatContext);
+
+    env->ReleaseStringUTFChars(path, nativePath);
+
+    return STATUS_SUCCESS;
+};

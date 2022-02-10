@@ -54,6 +54,6 @@ target_link_libraries(
         # List of libraries to link against:
         # Library for writing messages in LogCat
         ${log-lib}
-
+        android
         # FFmpeg libraries
         ${ffmpeg_libs_names})
