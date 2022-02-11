@@ -8,4 +8,6 @@ public interface VideoPlayerCallback {
    void onProgress(int total, int current);
 
    void onVideoStop();
+
+   void onError(int code, String msg);
 }

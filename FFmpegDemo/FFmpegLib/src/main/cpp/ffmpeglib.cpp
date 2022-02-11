@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <string>
 #include "video_player.h"
+#include "video_player_listener.h"
 #include "ffmpeg_define.h"
 
 extern "C" {
@@ -10,6 +11,8 @@ extern "C" {
 static const char *const JAVA_HOST_CLASS = "com/chadlin/ffmpeglib/FFmpegVideoManager";
 
 static jclass nativeClazz;
+JavaVM *jvm;
+VideoPlayListener* playListener;
 
 JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
     std::string hello = avcodec_configuration();
@@ -19,6 +22,13 @@ JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
                                           jstring local_path, jobject surface,
                                           jobject callback) {
+    if (playListener == nullptr) {
+        playListener = new VideoPlayListener(jvm, env, env->NewGlobalRef(callback));
+    }
+    playListener->onError(0, 100, "test");
+    playListener->onStop(0);
+    playListener->onStart(0);
+    playListener->onProgress(0, 1, 1);
     return play(env, local_path, surface) >= 0;
 }
 
@@ -30,7 +40,7 @@ static JNINativeMethod gMethods[] = {
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env = NULL;
     jint result = -1;
-
+    jvm = vm;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
         return result;
     }

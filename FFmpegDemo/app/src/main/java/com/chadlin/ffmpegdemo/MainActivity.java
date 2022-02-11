@@ -4,8 +4,10 @@ import com.chadlin.ffmpeglib.FFmpegVideoManager;
 import com.chadlin.ffmpeglib.VideoPlayerCallback;
 
 import android.graphics.SurfaceTexture;
+import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -21,9 +23,11 @@ import androidx.appcompat.app.AppCompatActivity;
  * Token for pushing to Git: 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
  */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
+    private static final String TAG = MainActivity.class.getSimpleName();
     private TextureView textureView;
     private LocalVideoDataSource localVideoDataSource;
     private SurfaceTexture surface;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,23 +60,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         FFmpegVideoManager.getInstance().playLocalVideo(item.path, new Surface(surface), new VideoPlayerCallback() {
                             @Override
                             public void onVideoStart() {
-
+                                Log.e(TAG, "onVideoStart");
                             }
 
                             @Override
                             public void onProgress(int total, int current) {
-
+                                Log.e(TAG, "onProgress, total=" + total + " current=" + current);
                             }
 
                             @Override
                             public void onVideoStop() {
+                                Log.e(TAG, "onVideoStop");
+                            }
 
+                            @Override
+                            public void onError(int code, String msg) {
+                                Log.e(TAG, "onError=" + msg);
                             }
                         });
 
                     }
                 }).start();
-                 break;
+                break;
         }
     }
 

@@ -22,42 +22,6 @@ extern "C" {
 //https://www.jianshu.com/p/c7de148e951c
 //https://blog.csdn.net/JohanMan/article/details/83091706
 
-VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj) {
-    this->vm = vm;
-    this->env = env;
-    this->jobj = obj;
-    jclass jclazz = env->GetObjectClass(jobj);
-    if (!jclazz) {
-        LOGE(TAG, "Error on getting jclass");
-        return;
-    }
-    jmethodId = env->GetMethodID(jclazz, "onError", "(ILjava/lang/String;)V");
-    if (!jmethodId) {
-        LOGE(TAG, "Error on getting method");
-        return;
-    }
-}
-
-VideoPlayListener::~VideoPlayListener() {
-
-}
-
-void VideoPlayListener::onError(int type, int code, const char *msg) {
-    if (type == 0) {
-        jstring jmsg = env->NewStringUTF(msg);
-        env->CallVoidMethod(jobj, jmethodId, code, jmsg);
-        env->DeleteLocalRef(jmsg);
-    } else if (type == 1) {
-        JNIEnv *jniEnv;
-        vm->AttachCurrentThread(&jniEnv, 0);
-        jstring jmsg = jniEnv->NewStringUTF(msg);
-        jniEnv->CallVoidMethod(jobj, jmethodId, code, jmsg);
-        jniEnv->DeleteLocalRef(jmsg);
-
-        vm->DetachCurrentThread();
-    }
-}
-
 int play(JNIEnv *env, jstring path_, jobject surface) {
 
     // 记录结果
