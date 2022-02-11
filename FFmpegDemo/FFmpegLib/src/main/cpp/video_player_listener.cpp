@@ -38,18 +38,13 @@ VideoPlayListener::~VideoPlayListener() {
     //TODO
 }
 
-void VideoPlayListener::onError(int type, int code, const char *msg) {
+void VideoPlayListener::onError(int type, int code) {
     if (type == THREAD_TYPE_SYNC) {
-        jstring jmsg = env->NewStringUTF(msg);
-        env->CallVoidMethod(jobj, jmethodErrorId, code, jmsg);
-        env->DeleteLocalRef(jmsg);
+        env->CallVoidMethod(jobj, jmethodErrorId, code);
     } else if (type == THREAD_TYPE_ASYNC) {
         JNIEnv *jniEnv;
         vm->AttachCurrentThread(&jniEnv, 0);
-        jstring jmsg = jniEnv->NewStringUTF(msg);
-        jniEnv->CallVoidMethod(jobj, jmethodErrorId, code, jmsg);
-        jniEnv->DeleteLocalRef(jmsg);
-
+        jniEnv->CallVoidMethod(jobj, jmethodErrorId, code);
         vm->DetachCurrentThread();
     }
 }

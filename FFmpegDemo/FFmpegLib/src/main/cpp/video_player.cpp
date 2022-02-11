@@ -22,7 +22,9 @@ extern "C" {
 //https://www.jianshu.com/p/c7de148e951c
 //https://blog.csdn.net/JohanMan/article/details/83091706
 
-int play(JNIEnv *env, jstring path_, jobject surface) {
+int play(JNIEnv *env, VideoPlayListener *listener, jstring path_, jobject surface, int threadType) {
+
+    listener->onStart(threadType);
 
     // 记录结果
     int result;
@@ -36,12 +38,14 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     result = avformat_open_input(&format_context, path, NULL, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not open video file");
+        listener->onError(threadType, ERROR_OPEN);
         return STATUS_FAILURE
     }
     // 查找视频文件的流信息
     result = avformat_find_stream_info(format_context, NULL);
     if (result < 0) {
         LOGE(TAG, " : Can not find video file stream info");
+        listener->onError(threadType, ERROR_FIND_VIDEO_STREAM_INFO);
         return STATUS_FAILURE
     }
     // 查找视频编码器
@@ -55,6 +59,7 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     // 没找到视频流
     if (video_stream_index == -1) {
         LOGE(TAG, " : Can not find video stream");
+        listener->onError(threadType, ERROR_FIND_VIDEO_STREAM);
         return STATUS_FAILURE;
     }
     // 初始化视频编码器上下文
@@ -65,12 +70,14 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     AVCodec *video_codec = avcodec_find_decoder(video_codec_context->codec_id);
     if (video_codec == NULL) {
         LOGE(TAG, " : Can not find video codec");
+        listener->onError(threadType, ERROR_FIND_DECODER);
         return STATUS_FAILURE;
     }
     // R3 打开视频解码器
     result = avcodec_open2(video_codec_context, video_codec, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not find video stream");
+        listener->onError(threadType, ERROR_OPEN_DECODER);
         return STATUS_FAILURE;
     }
     // 获取视频的宽高
@@ -80,6 +87,7 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     ANativeWindow *native_window = ANativeWindow_fromSurface(env, surface);
     if (native_window == NULL) {
         LOGE(TAG, " : Can not create native window");
+        listener->onError(threadType, ERROR_CREATE_NATIVE_WINDOW);
         return STATUS_FAILURE;
     }
     // 通过设置宽高限制缓冲区中的像素数量，而非屏幕的物理显示尺寸。
@@ -88,6 +96,7 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
                                               WINDOW_FORMAT_RGBA_8888);
     if (result < 0) {
         LOGE(TAG, " : Can not set native window buffer");
+        listener->onError(threadType, ERROR_SET_NATIVE_WINDOW_BUFFER);
         ANativeWindow_release(native_window);
         return STATUS_FAILURE;
     }
@@ -112,6 +121,13 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
             videoWidth, videoHeight, video_codec_context->pix_fmt,
             videoWidth, videoHeight, AV_PIX_FMT_RGBA,
             SWS_BICUBIC, NULL, NULL, NULL);
+
+    //Get duration about Video
+    long duration = 0;
+    if (format_context->duration != AV_NOPTS_VALUE) {
+        duration = format_context->duration / AV_TIME_BASE;
+    }
+    AVRational time_base = format_context->streams[video_stream_index]->time_base;
     // 开始读取帧
     while (av_read_frame(format_context, packet) >= 0) {
         // 匹配视频流
@@ -120,13 +136,17 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
             result = avcodec_send_packet(video_codec_context, packet);
             if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
                 LOGE(TAG, " : codec step 1 fail");
+                listener->onError(threadType, ERROR_DECODE_FAIL);
                 return STATUS_FAILURE;
             }
             result = avcodec_receive_frame(video_codec_context, frame);
             if (result < 0 && result != AVERROR_EOF) {
                 LOGE(TAG, " : codec step 2 fail");
+                listener->onError(threadType, ERROR_RECEIVE_FRAME);
                 return STATUS_FAILURE;
             }
+            double timestamp = frame->best_effort_timestamp * av_q2d(time_base);
+            listener->onProgress(threadType, duration, timestamp);
             // 数据格式转换
             result = sws_scale(
                     data_convert_context,
@@ -135,11 +155,13 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
                     rgba_frame->data, rgba_frame->linesize);
             if (result <= 0) {
                 LOGE("Player Error ", ": data convert fail");
+                listener->onError(threadType, ERROR_CONVERT_DATA);
                 return STATUS_FAILURE;
             }
             // 播放
             result = ANativeWindow_lock(native_window, &window_buffer, NULL);
             if (result < 0) {
+                listener->onError(threadType, ERROR_LOCK_NATIVE_WINDOW);
                 LOGE(TAG, " : Can not lock native window");
             } else {
                 // 将图像绘制到界面上
@@ -176,6 +198,8 @@ int play(JNIEnv *env, jstring path_, jobject surface) {
     // 释放 R1
 
     env->ReleaseStringUTFChars(path_, path);
+
+    listener->onStop(threadType);
 
     return STATUS_SUCCESS;
 };

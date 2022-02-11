@@ -25,11 +25,7 @@ JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
     if (playListener == nullptr) {
         playListener = new VideoPlayListener(jvm, env, env->NewGlobalRef(callback));
     }
-    playListener->onError(0, 100, "test");
-    playListener->onStop(0);
-    playListener->onStart(0);
-    playListener->onProgress(0, 1, 1);
-    return play(env, local_path, surface) >= 0;
+    return play(env, playListener, local_path, surface, 0) >= 0;
 }
 
 static JNINativeMethod gMethods[] = {

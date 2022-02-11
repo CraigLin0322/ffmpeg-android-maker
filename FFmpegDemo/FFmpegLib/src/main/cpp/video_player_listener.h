@@ -5,6 +5,7 @@
 
 #define THREAD_TYPE_SYNC  0
 #define THREAD_TYPE_ASYNC 1
+
 class VideoPlayListener {
 //https://blog.csdn.net/ywl5320/article/details/78739211
 public:
@@ -21,7 +22,7 @@ public:
 
     ~VideoPlayListener();
 
-    void onError(int type, int code, const char *msg);
+    void onError(int type, int code);
 
     void onStart(int type);
 
