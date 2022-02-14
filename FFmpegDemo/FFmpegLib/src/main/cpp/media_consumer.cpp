@@ -180,13 +180,6 @@ protected:
         swr_init(swrContext);
         //    获取通道数  2
         int out_channer_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
-////    反射得到Class类型
-//        jclass david_player = env->GetObjectClass(instance);
-////    反射得到createAudio方法
-//        jmethodID createAudio = env->GetMethodID(david_player, "createTrack", "(II)V");
-////    反射调用createAudio
-//        env->CallVoidMethod(instance, createAudio, 44100, out_channer_nb);
-//        jmethodID audio_write = env->GetMethodID(david_player, "playTrack", "([BI)V");
         int got_frame;
         while (av_read_frame(format_context, packet) >= 0) {
             if (packet->stream_index == stream_index) {
@@ -194,14 +187,13 @@ protected:
                 avcodec_decode_audio4(audio_codec_context, frame, &got_frame, packet);
                 if (got_frame) {
 //                    LOGE("解码");
-                    swr_convert(swrContext, &out_buffer, 44100 * 2, (const uint8_t **) frame->data, frame->nb_samples);
-//                缓冲区的大小
+                    swr_convert(swrContext, &out_buffer, 44100 * 2, (const uint8_t **) frame->data,
+                                frame->nb_samples);
+                    //缓冲区的大小
                     int size = av_samples_get_buffer_size(NULL, out_channer_nb, frame->nb_samples,
                                                           AV_SAMPLE_FMT_S16, 1);
-//                    jbyteArray audio_sample_array = env->NewByteArray(size);
-//                    env->SetByteArrayRegion(audio_sample_array, 0, size, (const jbyte *) out_buffer);
-//                    env->CallVoidMethod(instance, audio_write, audio_sample_array, size);
-//                    env->DeleteLocalRef(audio_sample_array);
+                    *pcm = out_buffer;
+                    *pcm_size = size;
                 }
             }
         }
