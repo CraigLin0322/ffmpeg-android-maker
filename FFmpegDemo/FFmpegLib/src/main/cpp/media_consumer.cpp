@@ -3,9 +3,10 @@
 
 class VideoConsumer : public MediaConsumer {
 private:
-    const char * TAG = "VideoConsumer";
+    const char *TAG = "VideoConsumer";
 protected:
-    int decodeStream(JNIEnv *env, jobject surface,AVFormatContext *format_context,int stream_index) override {
+    int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
+                     int stream_index) override {
         // init decoder context
         AVCodecContext *video_codec_context = avcodec_alloc_context3(NULL);
 
@@ -65,7 +66,7 @@ protected:
 //            duration = format_context->duration / AV_TIME_BASE;
 //        }
         AVRational time_base = format_context->streams[stream_index]->time_base;
-        double timestamp =0l;
+        double timestamp = 0l;
         // 开始读取帧
         while (av_read_frame(format_context, packet) >= 0) {
             // 匹配视频流
@@ -133,10 +134,78 @@ protected:
     void initResource() override {}
 };
 
-
+//https://www.jianshu.com/p/a3e5c3b99d4c
 class AudioConsumer : public MediaConsumer {
+    const char *TAG = "AudioConsumer";
 protected:
-    int decodeStream(JNIEnv *env, jobject surface,AVFormatContext *format_context, int stream_index) override {}
+    int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
+                     int stream_index) override {
+        //TODO change error flag for Audio
+        AVCodecContext *audio_codec_context = avcodec_alloc_context3(NULL);
+        avcodec_parameters_to_context(audio_codec_context,
+                                      format_context->streams[stream_index]->codecpar);
+
+        AVCodec *audio_codec = avcodec_find_decoder(audio_codec_context->codec_id);
+        if (audio_codec == NULL) {
+            return VIDEO_ERROR_FIND_DECODER;
+        }
+        int result = -1;
+        // Open video decoder
+        result = avcodec_open2(audio_codec_context, audio_codec, NULL);
+        if (result < 0) {
+            LOGE(TAG, ": Can not find video stream");
+            return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
+        }
+        //申请avpakcet，装解码前的数据
+        AVPacket *packet = (AVPacket *) av_malloc(sizeof(AVPacket));
+        //申请avframe，装解码后的数据
+        AVFrame *frame = av_frame_alloc();
+
+        //得到SwrContext ，进行重采样，具体参考http://blog.csdn.net/jammg/article/details/52688506
+        SwrContext *swrContext = swr_alloc();
+        //缓存区
+        uint8_t *out_buffer = (uint8_t *) av_malloc(44100 * 2);
+        //输出的声道布局（立体声）
+        uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
+        //输出采样位数  16位
+        enum AVSampleFormat sampleFormat = AV_SAMPLE_FMT_S16;
+        //输出的采样率必须与输入相同
+        int out_sample_rate = audio_codec_context->sample_rate;
+
+        //swr_alloc_set_opts将PCM源文件的采样格式转换为自己希望的采样格式
+        swr_alloc_set_opts(swrContext, out_ch_layout, sampleFormat, out_sample_rate,
+                           audio_codec_context->channel_layout, audio_codec_context->sample_fmt,
+                           audio_codec_context->sample_rate, 0,
+                           NULL);
+        swr_init(swrContext);
+        //    获取通道数  2
+        int out_channer_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+////    反射得到Class类型
+//        jclass david_player = env->GetObjectClass(instance);
+////    反射得到createAudio方法
+//        jmethodID createAudio = env->GetMethodID(david_player, "createTrack", "(II)V");
+////    反射调用createAudio
+//        env->CallVoidMethod(instance, createAudio, 44100, out_channer_nb);
+//        jmethodID audio_write = env->GetMethodID(david_player, "playTrack", "([BI)V");
+        int got_frame;
+        while (av_read_frame(format_context, packet) >= 0) {
+            if (packet->stream_index == stream_index) {
+//            解码  mp3   编码格式frame----pcm   frame
+                avcodec_decode_audio4(audio_codec_context, frame, &got_frame, packet);
+                if (got_frame) {
+//                    LOGE("解码");
+                    swr_convert(swrContext, &out_buffer, 44100 * 2, (const uint8_t **) frame->data, frame->nb_samples);
+//                缓冲区的大小
+                    int size = av_samples_get_buffer_size(NULL, out_channer_nb, frame->nb_samples,
+                                                          AV_SAMPLE_FMT_S16, 1);
+//                    jbyteArray audio_sample_array = env->NewByteArray(size);
+//                    env->SetByteArrayRegion(audio_sample_array, 0, size, (const jbyte *) out_buffer);
+//                    env->CallVoidMethod(instance, audio_write, audio_sample_array, size);
+//                    env->DeleteLocalRef(audio_sample_array);
+                }
+            }
+        }
+    }
 
     int
     play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath, jobject surface) override {
