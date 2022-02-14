@@ -20,25 +20,22 @@ JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
 }
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
-                                          jstring local_path, jobject surface,
-                                          jobject callback) {
-    if (playListener == nullptr) {
-        playListener = new VideoPlayListener(jvm, env, env->NewGlobalRef(callback));
-    }
-    return play(env, playListener, local_path, surface, 0) >= 0;
+                                          jstring local_path, jobject surface) {
+    return VideoPlayerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
 }
 
-JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread) {
+JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, jobject callback) {
     std::string hello = avcodec_configuration();
     if (hello.empty()) {
         return INITIALIZE_FAIL
     }
+    playListener = new VideoPlayListener(jvm, env, env->NewGlobalRef(callback), runInThread);
     return INITIALIZE_SUCCEED
 }
 
 JNIEXPORT void JNICALL deInit(JNIEnv *env, jobject thiz) {
     if (playListener != nullptr) {
-        free(playListener);
+        env->DeleteGlobalRef(playListener->jobj);
         delete playListener;
     }
 }
@@ -57,14 +54,13 @@ JNIEXPORT void JNICALL setProgress(JNIEnv *env, jobject thiz, jlong progress) {
 }
 
 static JNINativeMethod gMethods[] = {
-        {"testConnection",     "()Ljava/lang/String;",                                                                   (jstring *) pinService},
-        {"playLocalVideo",     "(Ljava/lang/String;Landroid/view/Surface;Lcom/chadlin/ffmpeglib/VideoPlayerCallback;)Z", (jboolean *) playLocalVideo},
-        {"initializeResource", "(Z)I",                                                                                   (jint *) init},
-        {"releaseResource",    "()V",                                                                                    (void *) deInit},
-        {""},
-        {"pauseVideo","()V",(void *) pause},
-        {"resumeVideo","()V",(void *) resume},
-        {"setVideoProgress","(J)V",(void *) setProgress}
+        {"testConnection",     "()Ljava/lang/String;",                            (jstring *) pinService},
+        {"playLocalVideo",     "(Ljava/lang/String;Landroid/view/Surface;)Z",     (jboolean *) playLocalVideo},
+        {"initializeResource", "(ZLcom/chadlin/ffmpeglib/VideoPlayerCallback;)I", (jint *) init},
+        {"releaseResource",    "()V",                                             (void *) deInit},
+        {"pauseVideo",         "()V",                                             (void *) pause},
+        {"resumeVideo",        "()V",                                             (void *) resume},
+        {"setVideoProgress",   "(J)V",                                            (void *) setProgress}
 };
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
@@ -87,6 +83,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
         return result;
     }
 
-    return JNI_VERSION_1_4;
+    return JNI_VERSION_1_6;
 }
 

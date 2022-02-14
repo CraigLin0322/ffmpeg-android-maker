@@ -2,9 +2,10 @@
 
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
+
 #define TAG "video_listener"
 
-VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj) {
+VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jboolean runOnThread) {
     this->vm = vm;
     this->env = env;
     this->jobj = obj;
@@ -32,13 +33,14 @@ VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj) {
     if (!jmethodProgressId) {
         LOGE(TAG, "Error on getting jmethodStartId");
     }
+    type = runOnThread ? THREAD_TYPE_ASYNC : THREAD_TYPE_SYNC;
 }
 
 VideoPlayListener::~VideoPlayListener() {
     //TODO
 }
 
-void VideoPlayListener::onError(int type, int code) {
+void VideoPlayListener::onError(int code) const {
     if (type == THREAD_TYPE_SYNC) {
         env->CallVoidMethod(jobj, jmethodErrorId, code);
     } else if (type == THREAD_TYPE_ASYNC) {
@@ -49,7 +51,7 @@ void VideoPlayListener::onError(int type, int code) {
     }
 }
 
-void VideoPlayListener::onProgress(int type,int total, int progress) {
+void VideoPlayListener::onProgress(int total, int progress) const {
     if (type == THREAD_TYPE_ASYNC) {
         JNIEnv *jniEnv;
         vm->AttachCurrentThread(&jniEnv, 0);
@@ -60,7 +62,7 @@ void VideoPlayListener::onProgress(int type,int total, int progress) {
     }
 }
 
-void VideoPlayListener::onStart(int type) {
+void VideoPlayListener::onStart() const {
     if (type == THREAD_TYPE_ASYNC) {
         JNIEnv *jniEnv;
         vm->AttachCurrentThread(&jniEnv, 0);
@@ -71,7 +73,7 @@ void VideoPlayListener::onStart(int type) {
     }
 }
 
-void VideoPlayListener::onStop(int type) {
+void VideoPlayListener::onStop() const {
     if (type == THREAD_TYPE_ASYNC) {
         JNIEnv *jniEnv;
         vm->AttachCurrentThread(&jniEnv, 0);

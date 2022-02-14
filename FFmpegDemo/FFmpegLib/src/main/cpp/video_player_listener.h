@@ -16,19 +16,20 @@ public:
     jmethodID jmethodStartId;
     jmethodID jmethodProgressId;
     jmethodID jmethodEndId;
+    int type;
 
 public:
-    VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj);
+    VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jboolean runOnThread);
 
     ~VideoPlayListener();
 
-    void onError(int type, int code);
+    void onError(int code) const;
 
-    void onStart(int type);
+    void onStart() const;
 
-    void onStop(int type);
+    void onStop() const;
 
-    void onProgress(int type,int total, int progress);
+    void onProgress(int total, int progress) const;
 
 };
 

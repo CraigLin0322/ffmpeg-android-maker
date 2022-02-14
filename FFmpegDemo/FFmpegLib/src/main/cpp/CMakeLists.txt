@@ -47,7 +47,8 @@ add_library(
         # All cpp files to compile
         ffmpeglib.cpp
         video_player.cpp
-        video_player_listener.cpp)
+        video_player_listener.cpp
+        thread_helper.cpp)
 
 target_link_libraries(
         # Library to link
