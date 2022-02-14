@@ -46,7 +46,8 @@ add_library(
         SHARED
         # All cpp files to compile
         ffmpeglib.cpp
-        video_player.cpp
+        media_producer.cpp
+        media_consumer.cpp
         video_player_listener.cpp
         thread_helper.cpp)
 
@@ -57,5 +58,6 @@ target_link_libraries(
         # Library for writing messages in LogCat
         ${log-lib}
         android
+        OpenSLES
         # FFmpeg libraries
         ${ffmpeg_libs_names})

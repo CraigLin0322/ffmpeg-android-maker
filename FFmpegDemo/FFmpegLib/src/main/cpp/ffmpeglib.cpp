@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include "video_player.h"
+#include "media_producer.h"
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
 
@@ -21,7 +21,7 @@ JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
                                           jstring local_path, jobject surface) {
-    return VideoPlayerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
+    return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
 }
 
 JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, jobject callback) {

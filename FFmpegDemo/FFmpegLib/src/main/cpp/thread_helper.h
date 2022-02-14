@@ -26,32 +26,32 @@ struct ItemRepository {
 
 typedef struct ItemRepository ItemRepository;
 
-class ThreadSingleton {
+class VideoManager {
  public:
-  static ThreadSingleton& Instance() {
+  static VideoManager& Instance() {
     // Since it's a static variable, if the class has already been created,
     // it won't be created again.
     // And it **is** thread-safe in C++11.
-    static ThreadSingleton myInstance;
+    static VideoManager myInstance;
 
     // Return a reference to our instance.
     return myInstance;
   }
 
   // delete copy and move constructors and assign operators
-  ThreadSingleton(ThreadSingleton const&) = delete;             // Copy construct
-  ThreadSingleton(ThreadSingleton&&) = delete;                  // Move construct
-  ThreadSingleton& operator=(ThreadSingleton const&) = delete;  // Copy assign
-  ThreadSingleton& operator=(ThreadSingleton &&) = delete;      // Move assign
+  VideoManager(VideoManager const&) = delete;             // Copy construct
+  VideoManager(VideoManager&&) = delete;                  // Move construct
+  VideoManager& operator=(VideoManager const&) = delete;  // Copy assign
+  VideoManager& operator=(VideoManager &&) = delete;      // Move assign
 
   // Any other public methods.
 
  protected:
-  ThreadSingleton() {
+  VideoManager() {
     // Constructor code goes here.
   }
 
-  ~ThreadSingleton() {
+  ~VideoManager() {
     // Destructor code goes here.
   }
 

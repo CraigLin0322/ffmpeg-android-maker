@@ -2,39 +2,27 @@
 #include <android/native_window_jni.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "video_player.h"
+#include "media_producer.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
-#include "libavutil/imgutils.h"
-#include "ffmpeg_define.h"
-
-#ifdef __cplusplus
-}
-#endif
 
 #define TAG "VideoPlayer"
 //https://www.jianshu.com/p/c7de148e951c
 //https://blog.csdn.net/JohanMan/article/details/83091706
 
-void VideoPlayerSingleton::pause(JNIEnv *env) {
+void MediaProducerSingleton::pause(JNIEnv *env) {
     if (videoState == VideoState::PLAYING) {
 
     }
 }
 
-void VideoPlayerSingleton::resume(JNIEnv *env) {
+void MediaProducerSingleton::resume(JNIEnv *env) {
     if (videoState == VideoState::PAUSED) {
 
     }
 }
 
-void VideoPlayerSingleton::seekTo(JNIEnv *env, jlong position) {
+void MediaProducerSingleton::seekTo(JNIEnv *env, jlong position) {
     //Core implementation of seeking to position
     //av_seek_frame(formatContext, -1, seek, AVSEEK_FLAG_BACKWARD);
     if (videoState == VideoState::NOT_STARTED) {
@@ -42,13 +30,13 @@ void VideoPlayerSingleton::seekTo(JNIEnv *env, jlong position) {
     }
 }
 
-void VideoPlayerSingleton::reset() {
+void MediaProducerSingleton::reset() {
     //TODO release resource while error happening
     videoState = VideoState::NOT_STARTED;
 }
 
-int VideoPlayerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
-                               jobject surface) {
+int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
+                                 jobject surface) {
     //TODO release resource and reset flags when error happens.
 
     if (videoState != VideoState::NOT_STARTED) {
@@ -57,81 +45,78 @@ int VideoPlayerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstring
     }
     listener->onStart();
     videoState = VideoState::PLAYING;
-    // 记录结果
     int result;
-    // R1 Java String -> C String
     const char *path = env->GetStringUTFChars(javaPath, 0);
-    // 注册 FFmpeg 组件
+    // Register components
     av_register_all();
-    // R2 初始化 AVFormatContext 上下文
+    // init AVFormatContext
     AVFormatContext *format_context = avformat_alloc_context();
-    // 打开视频文件
+    // Open video files
     result = avformat_open_input(&format_context, path, NULL, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not open video file");
         listener->onError(VIDEO_ERROR_OPEN);
         return VIDEO_STATUS_FAILURE
     }
-    // 查找视频文件的流信息
+    // Query video stream info
     result = avformat_find_stream_info(format_context, NULL);
     if (result < 0) {
         LOGE(TAG, " : Can not find video file stream info");
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM_INFO);
         return VIDEO_STATUS_FAILURE
     }
-    // 查找视频编码器
+    // Find decoder
     int video_stream_index = -1;
+    int audio_stream_index = -1;
     for (int i = 0; i < format_context->nb_streams; i++) {
-        // 匹配视频流
         if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             video_stream_index = i;
+        } else if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            audio_stream_index = i;
         }
     }
-    // 没找到视频流
     if (video_stream_index == -1) {
         LOGE(TAG, " : Can not find video stream");
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM);
-        return VIDEO_STATUS_FAILURE;
+        return VIDEO_STATUS_FAILURE
     }
-    // 初始化视频编码器上下文
+    // init decoder context
     AVCodecContext *video_codec_context = avcodec_alloc_context3(NULL);
+
+    //TODO separate flow of audio and video here
     avcodec_parameters_to_context(video_codec_context,
                                   format_context->streams[video_stream_index]->codecpar);
-    // 初始化视频编码器
     AVCodec *video_codec = avcodec_find_decoder(video_codec_context->codec_id);
     if (video_codec == NULL) {
         LOGE(TAG, " : Can not find video codec");
         listener->onError(VIDEO_ERROR_FIND_DECODER);
-        return VIDEO_STATUS_FAILURE;
+        return VIDEO_STATUS_FAILURE
     }
-    // R3 打开视频解码器
+    // Open video decoder
     result = avcodec_open2(video_codec_context, video_codec, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not find video stream");
         listener->onError(VIDEO_ERROR_OPEN_DECODER);
         return VIDEO_STATUS_FAILURE
     }
-    // 获取视频的宽高
     int videoWidth = video_codec_context->width;
     int videoHeight = video_codec_context->height;
-    // R4 初始化 Native Window 用于播放视频
+    // Init ANativeWindow
     ANativeWindow *native_window = ANativeWindow_fromSurface(env, surface);
     if (native_window == NULL) {
         LOGE(TAG, " : Can not create native window");
         listener->onError(VIDEO_ERROR_CREATE_NATIVE_WINDOW);
         return VIDEO_STATUS_FAILURE
     }
-    // 通过设置宽高限制缓冲区中的像素数量，而非屏幕的物理显示尺寸。
-    // 如果缓冲区与物理屏幕的显示尺寸不相符，则实际显示可能会是拉伸，或者被压缩的图像
+
     result = ANativeWindow_setBuffersGeometry(native_window, videoWidth, videoHeight,
                                               WINDOW_FORMAT_RGBA_8888);
     if (result < 0) {
         LOGE(TAG, " : Can not set native window buffer");
         listener->onError(VIDEO_ERROR_SET_NATIVE_WINDOW_BUFFER);
         ANativeWindow_release(native_window);
-        return VIDEO_STATUS_FAILURE;
+        return VIDEO_STATUS_FAILURE
     }
-    // 定义绘图缓冲区
     ANativeWindow_Buffer window_buffer;
     // 声明数据容器 有3个
     // R5 解码前数据容器 Packet 编码数据

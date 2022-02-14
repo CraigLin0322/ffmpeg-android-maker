@@ -4,14 +4,12 @@ import com.chadlin.ffmpeglib.FFmpegVideoManager;
 import com.chadlin.ffmpeglib.VideoPlayerCallback;
 
 import android.graphics.SurfaceTexture;
-import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.Toast;
 
 import java.util.List;
 
@@ -39,6 +37,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         textureView = findViewById(R.id.surface);
         textureView.setSurfaceTextureListener(this);
         localVideoDataSource = new LocalVideoDataSource(this);
+        FFmpegVideoManager.getInstance().initialize(false, new VideoPlayerCallback() {
+            @Override
+            public void onVideoStart() {
+                Log.e(TAG, "onVideoStart");
+            }
+
+            @Override
+            public void onProgress(int total, int current) {
+                Log.e(TAG, "onProgress, total=" + total + " current=" + current);
+            }
+
+            @Override
+            public void onVideoStop() {
+                Log.e(TAG, "onVideoStop");
+            }
+
+            @Override
+            public void onError(int code, String msg) {
+                Log.e(TAG, "onError=" + msg);
+            }
+        });
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -57,29 +76,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        List<VideoItem> list = readVideoFromLocal();
-                        VideoItem item = list.get(0);
-                        FFmpegVideoManager.getInstance().playVideo(item.path, new Surface(surface), new VideoPlayerCallback() {
-                            @Override
-                            public void onVideoStart() {
-                                Log.e(TAG, "onVideoStart");
-                            }
-
-                            @Override
-                            public void onProgress(int total, int current) {
-                                Log.e(TAG, "onProgress, total=" + total + " current=" + current);
-                            }
-
-                            @Override
-                            public void onVideoStop() {
-                                Log.e(TAG, "onVideoStop");
-                            }
-
-                            @Override
-                            public void onError(int code, String msg) {
-                                Log.e(TAG, "onError=" + msg);
-                            }
-                        });
+                        List<VideoItem> list = null;
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            list = readVideoFromLocal();
+                            VideoItem item = list.get(0);
+                            FFmpegVideoManager.getInstance().playVideo(item.path, new Surface(surface));
+                        }
 
                     }
                 }).start();
