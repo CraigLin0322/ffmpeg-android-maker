@@ -21,6 +21,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * Token for pushing to Git: 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
+ *
+ * Mac: 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
  */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextureView.SurfaceTextureListener {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -49,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = v.getId();
         switch (id) {
             case R.id.tv_test:
-                Toast.makeText(this, FFmpegVideoManager.getInstance().testConnection(), Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, FFmpegVideoManager.getInstance().testConnection(), Toast.LENGTH_SHORT).show();
                 break;
             case R.id.tv_play:
                 new Thread(new Runnable() {
@@ -57,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void run() {
                         List<VideoItem> list = readVideoFromLocal();
                         VideoItem item = list.get(0);
-                        FFmpegVideoManager.getInstance().playLocalVideo(item.path, new Surface(surface), new VideoPlayerCallback() {
+                        FFmpegVideoManager.getInstance().playVideo(item.path, new Surface(surface), new VideoPlayerCallback() {
                             @Override
                             public void onVideoStart() {
                                 Log.e(TAG, "onVideoStart");
