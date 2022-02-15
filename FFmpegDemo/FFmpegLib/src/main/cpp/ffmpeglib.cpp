@@ -48,16 +48,16 @@ JNIEXPORT void JNICALL deInit(JNIEnv *env, jobject thiz) {
 }
 
 
-JNIEXPORT void JNICALL pause(JNIEnv *env, jobject thiz) {
-    // TODO: implement pauseVideo()
+JNIEXPORT void JNICALL videoPause(JNIEnv *env, jobject thiz) {
+    MediaProducerSingleton::Instance().pause(env);
 }
 
-JNIEXPORT void JNICALL resume(JNIEnv *env, jobject thiz) {
-    // TODO: implement pauseVideo()
+JNIEXPORT void JNICALL videoResume(JNIEnv *env, jobject thiz) {
+    MediaProducerSingleton::Instance().resume(env);
 }
 
 JNIEXPORT void JNICALL setProgress(JNIEnv *env, jobject thiz, jlong progress) {
-    // TODO: implement pauseVideo()
+    MediaProducerSingleton::Instance().seekTo(env, progress);
 }
 
 static JNINativeMethod gMethods[] = {
@@ -65,8 +65,8 @@ static JNINativeMethod gMethods[] = {
         {"playLocalVideo",     "(Ljava/lang/String;Landroid/view/Surface;)Z",     (jboolean *) playLocalVideo},
         {"initializeResource", "(ZLcom/chadlin/ffmpeglib/VideoPlayerCallback;)I", (jint *) init},
         {"releaseResource",    "()V",                                             (void *) deInit},
-        {"pauseVideo",         "()V",                                             (void *) pause},
-        {"resumeVideo",        "()V",                                             (void *) resume},
+        {"pauseVideo",         "()V",                                             (void *) videoPause},
+        {"resumeVideo",        "()V",                                             (void *) videoResume},
         {"setVideoProgress",   "(J)V",                                            (void *) setProgress}
 };
 
@@ -90,6 +90,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
         return result;
     }
 
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_4;
 }
 

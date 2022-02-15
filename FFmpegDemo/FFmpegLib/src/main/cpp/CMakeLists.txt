@@ -47,7 +47,8 @@ add_library(
         # All cpp files to compile
         ffmpeglib.cpp
         media_producer.cpp
-        media_consumer.cpp
+        video_consumer.cpp
+        audio_consumer.cpp
         video_player_listener.cpp
         thread_helper.cpp)
 

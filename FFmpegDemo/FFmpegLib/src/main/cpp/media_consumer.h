@@ -28,23 +28,28 @@ extern "C" {
 
 class MediaConsumer {
 
-protected:
+public:
     int stream_index = INVALID_STREAM_INDEX;
 
-    virtual int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context, int stream_index);
+    virtual int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
+                             int stream_index) const = 0;
 
     virtual int
-    play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath, jobject surface);
+    play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath, jobject surface) const = 0;
 
-    virtual void seekTo(JNIEnv *env, jlong position) = 0;
+    virtual void seekTo(JNIEnv *env, jlong position) const = 0;
 
-    virtual void pause(JNIEnv *env) = 0;
+    virtual void pause(JNIEnv *env) const = 0;
 
-    virtual void resume(JNIEnv *env) = 0;
+    virtual void resume(JNIEnv *env) const = 0;
 
-    virtual void releaseResource() = 0;
+    virtual void releaseResource() const = 0;
 
-    virtual void initResource() = 0;
+    virtual void initResource() const = 0;
+
+    ~MediaConsumer() {
+
+    }
 };
 
 

@@ -1,6 +1,9 @@
 #ifndef __MEDIA_PRODUCER_H__
 #define __MEDIA_PRODUCER_H__
 
+#include "video_consumer.h"
+#include "audio_consumer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,7 +13,6 @@ extern "C" {
 #include "libswscale/swscale.h"
 #include "libavutil/imgutils.h"
 #include "ffmpeg_define.h"
-
 #ifdef __cplusplus
 }
 #endif
@@ -48,12 +50,17 @@ public:
 
 protected:
     VideoState videoState;
+    MediaConsumer *videoConsumer;
+    MediaConsumer *audioConsumer;
+
     MediaProducerSingleton() {
-        // Constructor code goes here.
+        videoConsumer = new VideoConsumer();
+        audioConsumer = new AudioConsumer();
     }
 
     ~MediaProducerSingleton() {
-        // Destructor code goes here.
+        delete audioConsumer;
+        delete videoConsumer;
     }
 
     // And any other protected methods.
