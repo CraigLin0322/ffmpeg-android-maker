@@ -183,17 +183,16 @@ protected:
         int got_frame;
         while (av_read_frame(format_context, packet) >= 0) {
             if (packet->stream_index == stream_index) {
-//            解码  mp3   编码格式frame----pcm   frame
+//           decode mp3
                 avcodec_decode_audio4(audio_codec_context, frame, &got_frame, packet);
                 if (got_frame) {
-//                    LOGE("解码");
                     swr_convert(swrContext, &out_buffer, 44100 * 2, (const uint8_t **) frame->data,
                                 frame->nb_samples);
-                    //缓冲区的大小
+                    //setup buffer
                     int size = av_samples_get_buffer_size(NULL, out_channer_nb, frame->nb_samples,
                                                           AV_SAMPLE_FMT_S16, 1);
-                    *pcm = out_buffer;
-                    *pcm_size = size;
+//                    *pcm = out_buffer;
+//                    *pcm_size = size;
                 }
             }
         }

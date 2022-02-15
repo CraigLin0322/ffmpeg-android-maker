@@ -11,6 +11,8 @@ extern "C" {
 static const char *const JAVA_HOST_CLASS = "com/chadlin/ffmpeglib/FFmpegVideoManager";
 
 static jclass nativeClazz;
+jobject videoCallback;
+jboolean runInThreadNative;
 JavaVM *jvm;
 VideoPlayListener *playListener;
 
@@ -21,6 +23,10 @@ JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
                                           jstring local_path, jobject surface) {
+    if (playListener == nullptr) {
+        //Note that this env could be different everytime call from java side
+        playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
+    }
     return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
 }
 
@@ -29,13 +35,14 @@ JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, job
     if (hello.empty()) {
         return INITIALIZE_FAIL
     }
-    playListener = new VideoPlayListener(jvm, env, env->NewGlobalRef(callback), runInThread);
+    videoCallback = env->NewGlobalRef(callback);
+    runInThreadNative = runInThread;
     return INITIALIZE_SUCCEED
 }
 
 JNIEXPORT void JNICALL deInit(JNIEnv *env, jobject thiz) {
     if (playListener != nullptr) {
-        env->DeleteGlobalRef(playListener->jobj);
+        env->DeleteGlobalRef(videoCallback);
         delete playListener;
     }
 }

@@ -30,7 +30,7 @@ VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jbool
     }
 
     jmethodStartId = env->GetMethodID(jclazz, "onVideoStart", "()V");
-    if (!jmethodProgressId) {
+    if (!jmethodStartId) {
         LOGE(TAG, "Error on getting jmethodStartId");
     }
     type = runOnThread ? THREAD_TYPE_ASYNC : THREAD_TYPE_SYNC;
