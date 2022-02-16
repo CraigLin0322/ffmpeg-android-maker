@@ -43,9 +43,9 @@ public:
 
     virtual void resume(JNIEnv *env) const = 0;
 
-    virtual void releaseResource() const = 0;
+    virtual void releaseResource() = 0;
 
-    virtual void initResource() const = 0;
+    virtual void initResource() = 0;
 
     ~MediaConsumer() {
 

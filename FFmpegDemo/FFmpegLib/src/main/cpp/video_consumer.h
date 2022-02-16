@@ -19,9 +19,10 @@ public:
 
     void resume(JNIEnv *env) const override;
 
-    void releaseResource() const override;
+    void releaseResource() override;
 
-    void initResource() const override;
+    void initResource() override;
+    
     ~VideoConsumer() {
 
     }

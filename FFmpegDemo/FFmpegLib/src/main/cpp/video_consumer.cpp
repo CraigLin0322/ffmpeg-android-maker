@@ -129,11 +129,11 @@ void VideoConsumer::pause(JNIEnv *env) const {
 
 }
 
-void VideoConsumer::initResource() const {
+void VideoConsumer::initResource()  {
 
 }
 
-void VideoConsumer::releaseResource() const {
+void VideoConsumer::releaseResource()  {
 
 }
 

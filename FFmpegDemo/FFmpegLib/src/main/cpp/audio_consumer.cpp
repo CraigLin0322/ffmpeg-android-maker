@@ -73,11 +73,38 @@ void AudioConsumer::pause(JNIEnv *env) const {
 
 }
 
-void AudioConsumer::initResource() const {
+//https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
+void AudioConsumer::initResource() {
+    audioResult = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
+    if (audioResult != SL_RESULT_SUCCESS) {
 
+    }
+    audioResult = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    audioResult = (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    audioResult = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, nullptr, nullptr);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    audioResult = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    audioResult = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
+                                                   &outputMixEnvReverb);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    audioResult = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(outputMixEnvReverb,
+                                                                          &reverbSettings);
 }
 
-void AudioConsumer::releaseResource() const {
+void AudioConsumer::releaseResource()  {
 
 }
 
