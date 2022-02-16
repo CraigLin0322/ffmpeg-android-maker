@@ -5,7 +5,6 @@
 #include "media_producer.h"
 
 
-
 #define TAG "VideoPlayer"
 //https://www.jianshu.com/p/c7de148e951c
 //https://blog.csdn.net/JohanMan/article/details/83091706
@@ -65,9 +64,9 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM_INFO);
         return VIDEO_STATUS_FAILURE
     }
+
+
     // Find decoder
-    int video_stream_index = -1;
-    int audio_stream_index = -1;
     for (int i = 0; i < format_context->nb_streams; i++) {
         if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             video_stream_index = i;
@@ -80,12 +79,38 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM);
         return VIDEO_STATUS_FAILURE
     }
-    int succeed = VIDEO_STATUS_SUCCESS
-    result = videoConsumer->decodeStream(env, surface, format_context, video_stream_index);
-    if (succeed != result) {
-        listener->onError(result);
-        return VIDEO_STATUS_FAILURE
+    // init decoder context
+    video_codec_context = format_context->streams[video_stream_index]->codec;
+    audio_codec_context = format_context->streams[video_stream_index]->codec;
+
+    video_codec = avcodec_find_decoder(video_codec_context->codec_id);
+    if (video_codec == NULL) {
+        return VIDEO_ERROR_FIND_DECODER;
     }
+
+    if (audio_codec == NULL) {
+        return VIDEO_ERROR_FIND_DECODER;
+    }
+    // Open video decoder
+    result = avcodec_open2(video_codec_context, video_codec, NULL);
+    audio_codec = avcodec_find_decoder(audio_codec_context->codec_id);
+    if (result < 0) {
+        LOGE(TAG, ": Can not find video stream");
+        return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
+    }
+    videoWidth = video_codec_context->width;
+    videoHeight = video_codec_context->height;
+    // Init ANativeWindow
+    native_window = ANativeWindow_fromSurface(env, surface);
+    if (native_window == NULL) {
+        LOGE(TAG, " : Can not create native window");
+        return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
+    }
+
+    //Init Audio
+    //TODO
+
+
     avformat_close_input(&format_context);
     env->ReleaseStringUTFChars(javaPath, path);
 
@@ -94,4 +119,12 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     listener->onStop();
 
     return VIDEO_STATUS_SUCCESS
+}
+
+int initInputFormatContext(MediaProducerSingleton *singleton, const char *javaPath) {
+
+}
+
+int initCodecContext(MediaProducerSingleton *singleton) {
+
 }

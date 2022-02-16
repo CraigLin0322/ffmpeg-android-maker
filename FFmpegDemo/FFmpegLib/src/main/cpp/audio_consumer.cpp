@@ -29,7 +29,7 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     uint8_t *out_buffer = (uint8_t *) av_malloc(44100 * 2);
     //输出的声道布局（立体声）
     uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
-    //输出采样位数  16位
+    //Output sampleSize, basically for 16
     enum AVSampleFormat sampleFormat = AV_SAMPLE_FMT_S16;
     //输出的采样率必须与输入相同
     int out_sample_rate = audio_codec_context->sample_rate;
@@ -58,6 +58,10 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
             }
         }
     }
+    swr_free(&swrContext);
+    av_free(out_buffer);
+    av_frame_free(&frame);
+    av_packet_free(&packet);
     return VIDEO_STATUS_SUCCESS
 }
 

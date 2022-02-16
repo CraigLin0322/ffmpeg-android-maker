@@ -20,7 +20,11 @@ extern "C" {
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
 
-enum VideoState {NOT_STARTED,PLAYING,PAUSED};
+
+enum VideoState {
+    NOT_STARTED, PLAYING, PAUSED
+};
+
 class MediaProducerSingleton {
 public:
     static MediaProducerSingleton &Instance() {
@@ -52,6 +56,17 @@ protected:
     VideoState videoState;
     MediaConsumer *videoConsumer;
     MediaConsumer *audioConsumer;
+    AVCodecContext *video_codec_context;
+    AVCodecContext *audio_codec_context;
+    int video_stream_index;
+    int audio_stream_index;
+    AVCodec *video_codec;
+    AVCodec *audio_codec;
+    int videoWidth;
+    int videoHeight;
+    ANativeWindow  *native_window;
+    SwrContext * swrContext;
+
 
     MediaProducerSingleton() {
         videoConsumer = new VideoConsumer();
@@ -66,5 +81,9 @@ protected:
     // And any other protected methods.
     void reset();
 };
+
+int initInputFormatContext(MediaProducerSingleton *singleton, const char *javaPath);
+
+int initCodecContext(MediaProducerSingleton *singleton);
 
 #endif // __MEDIA_PRODUCER_H__
