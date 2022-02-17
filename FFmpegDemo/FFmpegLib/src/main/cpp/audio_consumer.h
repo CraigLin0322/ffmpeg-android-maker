@@ -22,7 +22,7 @@ protected:
     //Object of buffer
     SLObjectItf bpPlayerObject = nullptr;
     SLPlayItf bqPlayerPlay;
-    SLAndroidSimpleBufferQueueItf_ bpPlayerBufferQueue;
+    SLAndroidSimpleBufferQueueItf bpPlayerBufferQueue;
     SLEffectSendItf  bpPlayerEffectSend;
     SLVolumeItf  bqPlayerVolume;
 
@@ -37,7 +37,7 @@ protected:
 public:
 
     int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index) const override;
+                     int stream_index) override;
 
     int play(JNIEnv *env, VideoPlayListener *listener,
              jstring javaPath, jobject surface) const override;
@@ -51,6 +51,12 @@ public:
     void releaseResource() override;
 
     void initResource() override;
+
+private:
+    virtual void initBufferQueue(int rate, int channel,int bitsPerSample) = 0;
+
+    virtual void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) = 0;
+
 
     ~AudioConsumer() {
 

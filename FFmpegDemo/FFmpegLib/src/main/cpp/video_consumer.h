@@ -8,7 +8,7 @@ protected:
     const char *TAG = "VideoConsumer";
 public:
     int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index) const override;
+                     int stream_index) override;
 
     int play(JNIEnv *env, VideoPlayListener *listener,
              jstring javaPath, jobject surface) const override;
@@ -22,7 +22,7 @@ public:
     void releaseResource() override;
 
     void initResource() override;
-    
+
     ~VideoConsumer() {
 
     }

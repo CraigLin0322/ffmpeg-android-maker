@@ -1,7 +1,7 @@
 #include "audio_consumer.h"
 
 int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                                int stream_index) const {
+                                int stream_index) {
     //TODO change error flag for Audio
     AVCodecContext *audio_codec_context = avcodec_alloc_context3(NULL);
     avcodec_parameters_to_context(audio_codec_context,
@@ -42,6 +42,8 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     swr_init(swrContext);
     //    获取通道数  2
     int out_channer_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+    AudioConsumer::initBufferQueue(audio_codec_context->sample_rate, audio_codec_context->channels,
+                                   SL_PCMSAMPLEFORMAT_FIXED_16);
     int got_frame;
     while (av_read_frame(format_context, packet) >= 0) {
         if (packet->stream_index == stream_index) {
@@ -73,6 +75,67 @@ void AudioConsumer::pause(JNIEnv *env) const {
 
 }
 
+void AudioConsumer::bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) {
+    int bufferSize = 0;
+    getPcm(&openBuffer, &bufferSize);
+    if (nullptr != &openBuffer && 0 != &bufferSize) {
+        audioResult = (*bpPlayerBufferQueue)->Enqueue(bpPlayerBufferQueue, openBuffer, bufferSize);
+        if (audioResult < 0) {
+
+        } else{
+            //frame_count++
+        }
+    }
+}
+
+void AudioConsumer::initBufferQueue(int rate, int channel, int bitsPerSample) {
+    //Init audio buffer queue
+
+    SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,2};
+    SLDataFormat_PCM formatPcm;
+    formatPcm.formatType = SL_DATAFORMAT_PCM;
+    formatPcm.numChannels = (SLuint32) channel;
+    formatPcm.bitsPerSample = (SLuint32) bitsPerSample;
+    formatPcm.samplesPerSec = (SLuint32) (rate * 1000);
+    formatPcm.containerSize = 16;
+    if (channel == 2) {
+        formatPcm.channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+    } else {
+        formatPcm.channelMask = SL_SPEAKER_FRONT_CENTER;
+    }
+
+    formatPcm.endianness = SL_BYTEORDER_LITTLEENDIAN;
+    SLDataSource audioSrc = {&bufferQueue, &formatPcm};
+
+    SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
+    SLDataSink audioSink{&loc_outmix, nullptr};
+
+    const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE, SL_IID_EFFECTSEND, SL_IID_VOLUME};
+    const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+
+    audioResult = (*engineEngine)->CreateAudioPlayer(engineEngine, &bpPlayerObject,
+                                                     &audioSrc, &audioSink, 3, ids, req);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+
+    audioResult = (*bpPlayerObject)->Realize(bpPlayerObject, SL_BOOLEAN_FALSE);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_PLAY, &bqPlayerPlay);
+    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_BUFFERQUEUE, &bpPlayerBufferQueue);
+    audioResult = (*bpPlayerBufferQueue)->RegisterCallback(bpPlayerBufferQueue,
+                                                           callback,
+                                                           nullptr);
+    if (audioResult != SL_RESULT_SUCCESS) {
+
+    }
+    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_EFFECTSEND, &bpPlayerEffectSend);
+    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_VOLUME, &bqPlayerVolume);
+    audioResult = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
+}
+
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
 void AudioConsumer::initResource() {
     audioResult = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
@@ -87,7 +150,8 @@ void AudioConsumer::initResource() {
     if (audioResult != SL_RESULT_SUCCESS) {
 
     }
-    audioResult = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, nullptr, nullptr);
+    audioResult = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, nullptr,
+                                                   nullptr);
     if (audioResult != SL_RESULT_SUCCESS) {
 
     }
@@ -104,7 +168,7 @@ void AudioConsumer::initResource() {
                                                                           &reverbSettings);
 }
 
-void AudioConsumer::releaseResource()  {
+void AudioConsumer::releaseResource() {
 
 }
 

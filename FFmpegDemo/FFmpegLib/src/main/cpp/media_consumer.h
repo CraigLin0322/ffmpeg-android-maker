@@ -32,7 +32,7 @@ public:
     int stream_index = INVALID_STREAM_INDEX;
 
     virtual int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                             int stream_index) const = 0;
+                             int stream_index) = 0;
 
     virtual int
     play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath, jobject surface) const = 0;

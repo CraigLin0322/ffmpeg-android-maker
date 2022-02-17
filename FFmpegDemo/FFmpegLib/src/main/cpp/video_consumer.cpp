@@ -2,7 +2,7 @@
 
 
 int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                                int stream_index) const {
+                                int stream_index) {
     // init decoder context
     AVCodecContext *video_codec_context = avcodec_alloc_context3(NULL);
 
@@ -129,11 +129,11 @@ void VideoConsumer::pause(JNIEnv *env) const {
 
 }
 
-void VideoConsumer::initResource()  {
+void VideoConsumer::initResource() {
 
 }
 
-void VideoConsumer::releaseResource()  {
+void VideoConsumer::releaseResource() {
 
 }
 
