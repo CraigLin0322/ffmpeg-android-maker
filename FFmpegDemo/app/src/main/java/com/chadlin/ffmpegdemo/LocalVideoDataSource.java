@@ -4,14 +4,22 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.util.Size;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,12 +90,33 @@ public class LocalVideoDataSource {
             collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
         }
         List<VideoItem> list = new ArrayList<>(queryData(collection, MediaStore.Video.Media.EXTERNAL_CONTENT_URI));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        } else {
-            collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+
+        //Query Download
+        File downloadFiles = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadFiles.exists() && downloadFiles.canRead()) {
+            File[] listFiles = downloadFiles.listFiles();
+            if (listFiles != null && listFiles.length > 0) {
+                for (File file : listFiles) {
+                    String path = file.getAbsolutePath();
+                    if (!FileUtils.isVideo(path)) {
+                        continue;
+                    }
+                    MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                    retriever.setDataSource(path);
+                    if ("yes".equals(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO))) {
+                        String name = file.getName();
+                        Bitmap thumbnail = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND);
+                        long duration = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+                        long size = FileUtils.getFileSize(file);
+                        long date = file.lastModified();
+                        VideoItem item = new VideoItem(Uri.parse(path),
+                                path, name, thumbnail, duration,size, date);
+                        list.add(item);
+                    }
+                    retriever.close();
+                }
+            }
         }
-        list.addAll(queryData(collection, MediaStore.Downloads.EXTERNAL_CONTENT_URI));
         return list;
     }
 }

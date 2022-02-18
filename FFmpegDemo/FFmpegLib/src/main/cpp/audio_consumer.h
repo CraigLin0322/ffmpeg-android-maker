@@ -8,8 +8,7 @@
 #include "SLES/OpenSLES_Android.h"
 
 namespace AudioConsumer {
-    int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index);
+    int decodeStream();
 
     int play(JNIEnv *env, VideoPlayListener *listener,
              jstring javaPath, jobject surface);
@@ -23,8 +22,6 @@ namespace AudioConsumer {
     void releaseResource();
 
     int initResource(AVFormatContext *formatContext, int index);
-
-    void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context);
 
 }
 

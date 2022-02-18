@@ -1,7 +1,7 @@
 #include "video_consumer.h"
 
 using namespace VideoConsumer;
-const char *TAG = "VideoConsumer";
+static const char *TAG = "VideoConsumer";
 
 int videoHeight;
 int videoWidth;
@@ -9,6 +9,7 @@ ANativeWindow *native_window;
 AVCodecContext *video_codec_context;
 AVFormatContext *format_context;
 AVCodec *video_codec;
+int playRate = 1;
 int video_stream_index = -1;
 
 int VideoConsumer::decodeStream() {
@@ -42,46 +43,43 @@ int VideoConsumer::decodeStream() {
     }
     AVRational time_base = video_codec_context->time_base;
     double timestamp = 0l;
+    int finish = 0;
     // Read frame
     while (av_read_frame(format_context, packet) >= 0) {
         if (packet->stream_index == video_stream_index) {
-            result = avcodec_send_packet(video_codec_context, packet);
-            if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
-                LOGE(TAG, " : codec step 1 fail");
-                return VIDEO_ERROR_DECODE_FAIL;
-            }
-            result = avcodec_receive_frame(video_codec_context, frame);
-            if (result < 0 && result != AVERROR_EOF) {
-                LOGE(TAG, " : codec step 2 fail");
-                return VIDEO_ERROR_RECEIVE_FRAME;
-            }
-            timestamp = frame->best_effort_timestamp * av_q2d(time_base);
+            avcodec_decode_video2(video_codec_context, frame, &finish,
+                                  packet);
+            if (finish) {
+                timestamp = frame->best_effort_timestamp * av_q2d(time_base);
 //            listener->onProgress(duration, timestamp);
-            result = sws_scale(
-                    data_convert_context,
-                    (const uint8_t *const *) frame->data, frame->linesize,
-                    0, videoHeight,
-                    rgba_frame->data, rgba_frame->linesize);
-            if (result <= 0) {
-                LOGE("Player Error ", ": data convert fail");
-                return VIDEO_ERROR_CONVERT_DATA;
-            }
-            // play
-            result = ANativeWindow_lock(native_window, &window_buffer, NULL);
-            if (result < 0) {
-                LOGE(TAG, " : Can not lock native window");
-                return VIDEO_ERROR_LOCK_NATIVE_WINDOW;
-            } else {
-                // 将图像绘制到界面上
-                // 注意 : 这里 rgba_frame 一行的像素和 window_buffer 一行的像素长度可能不一致
-                // 需要转换好 否则可能花屏
-                uint8_t *bits = (uint8_t *) window_buffer.bits;
-                for (int h = 0; h < videoHeight; h++) {
-                    memcpy(bits + h * window_buffer.stride * 4,
-                           out_buffer + h * rgba_frame->linesize[0],
-                           rgba_frame->linesize[0]);
+                result = sws_scale(
+                        data_convert_context,
+                        (const uint8_t *const *) frame->data, frame->linesize,
+                        0, videoHeight,
+                        rgba_frame->data, rgba_frame->linesize);
+                if (result <= 0) {
+                    LOGE("Player Error ", ": data convert fail");
+                    return VIDEO_ERROR_CONVERT_DATA;
                 }
-                ANativeWindow_unlockAndPost(native_window);
+                // play
+                result = ANativeWindow_lock(native_window, &window_buffer, NULL);
+                if (result < 0) {
+                    LOGE(TAG, " : Can not lock native window");
+                    return VIDEO_ERROR_LOCK_NATIVE_WINDOW;
+                } else {
+                    // 将图像绘制到界面上
+                    // 注意 : 这里 rgba_frame 一行的像素和 window_buffer 一行的像素长度可能不一致
+                    // 需要转换好 否则可能花屏
+                    uint8_t *bits = (uint8_t *) window_buffer.bits;
+                    for (int h = 0; h < videoHeight; h++) {
+                        memcpy(bits + h * window_buffer.stride * 4,
+                               out_buffer + h * rgba_frame->linesize[0],
+                               rgba_frame->linesize[0]);
+                    }
+                    ANativeWindow_unlockAndPost(native_window);
+                }
+                //TODO implment fast forward/rewind
+//                usleep((unsigned long) (1000 * 40 * playRate));
             }
         }
         // release packet reference

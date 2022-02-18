@@ -1,8 +1,5 @@
 package com.chadlin.ffmpegdemo;
 
-import com.chadlin.ffmpeglib.FFmpegVideoManager;
-import com.chadlin.ffmpeglib.VideoPlayerCallback;
-
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,11 +8,14 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.chadlin.ffmpeglib.FFmpegVideoManager;
+import com.chadlin.ffmpeglib.VideoPlayerCallback;
+
+import java.util.List;
 
 /**
  * Token for pushing to Git: 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

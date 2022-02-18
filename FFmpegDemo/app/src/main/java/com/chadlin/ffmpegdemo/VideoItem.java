@@ -6,13 +6,13 @@ import android.net.Uri;
 public class VideoItem {
      final Uri uri;
      final String name;
-     final int duration;
-     final int size;
+     final long duration;
+     final long size;
      final Bitmap thumbnail;
-     final int date;
+     final long date;
      final String path;
 
-    public VideoItem(Uri uri, String path, String name, Bitmap thumbnail, int duration, int size, int date) {
+    public VideoItem(Uri uri, String path, String name, Bitmap thumbnail, long duration, long size, long date) {
         this.path = path;
         this.date = date;
         this.uri = uri;
