@@ -3,6 +3,14 @@
 using namespace VideoConsumer;
 const char *TAG = "VideoConsumer";
 
+int videoHeight;
+int videoWidth;
+ANativeWindow *native_window;
+AVCodecContext *video_codec_context;
+AVFormatContext *format_context;
+AVCodec *video_codec;
+int video_stream_index = -1;
+
 int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
                                 int stream_index) {
     // init decoder context
@@ -60,8 +68,8 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
 
     //Get duration about Video
 //        long duration = 0;
-//        if (format_context->duration != AV_NOPTS_VALUE) {
-//            duration = format_context->duration / AV_TIME_BASE;
+//        if (avFormatContext->duration != AV_NOPTS_VALUE) {
+//            duration = avFormatContext->duration / AV_TIME_BASE;
 //        }
     AVRational time_base = format_context->streams[stream_index]->time_base;
     double timestamp = 0l;
@@ -131,8 +139,32 @@ void VideoConsumer::pause(JNIEnv *env) {
 
 }
 
-void VideoConsumer::initResource() {
+int VideoConsumer::initResource(AVFormatContext *formatContext, int index, JNIEnv *env,
+                                jobject surface) {
+    int result = VIDEO_STATUS_FAILURE;
+    format_context = formatContext;
+    video_stream_index = index;
 
+    video_codec_context = format_context->streams[video_stream_index]->codec;
+    video_codec = avcodec_find_decoder(video_codec_context->codec_id);
+    if (video_codec == NULL) {
+        return VIDEO_ERROR_FIND_DECODER;
+    }
+    result = avcodec_open2(video_codec_context, video_codec, NULL);
+    if (result < 0) {
+        LOGE(TAG, ": Can not find video stream");
+        return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
+    }
+    videoHeight = video_codec_context->height;
+    videoWidth = video_codec_context->width;
+
+    // Init ANativeWindow
+    native_window = ANativeWindow_fromSurface(env, surface);
+    if (native_window == NULL) {
+        LOGE(TAG, " : Can not create native window");
+        return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
+    }
+    return VIDEO_STATUS_SUCCESS;
 }
 
 void VideoConsumer::releaseResource() {

@@ -5,8 +5,8 @@
 #define LOGI(TAG, FORMAT, ...) __android_log_print(ANDROID_LOG_INFO, TAG, FORMAT, ##__VA_ARGS__)
 #define LOGE(TAG, FORMAT, ...) __android_log_print(ANDROID_LOG_ERROR, TAG, FORMAT, ##__VA_ARGS__)
 
-#define INITIALIZE_SUCCEED 0;
-#define INITIALIZE_FAIL 1;
+#define INITIALIZE_SUCCEED -1111;
+#define INITIALIZE_FAIL -1112;
 
 #define VIDEO_STATUS_SUCCESS 0;
 #define VIDEO_STATUS_FAILURE -1;

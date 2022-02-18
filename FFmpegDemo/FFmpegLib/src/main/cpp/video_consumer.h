@@ -18,7 +18,8 @@ namespace VideoConsumer {
 
     void releaseResource() ;
 
-    void initResource() ;
+    int
+    initResource(AVFormatContext *format_context, int stream_index, JNIEnv *env, jobject surface);
 }
 
 #endif // __VIDEO_CONSUMER_H__

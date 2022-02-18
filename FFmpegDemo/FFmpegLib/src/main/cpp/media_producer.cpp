@@ -3,11 +3,14 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "media_producer.h"
+#include "video_consumer.h"
+#include "audio_consumer.h"
 
 
 #define TAG "VideoPlayer"
 //https://www.jianshu.com/p/c7de148e951c
 //https://blog.csdn.net/JohanMan/article/details/83091706
+
 
 void MediaProducerSingleton::pause(JNIEnv *env) {
     if (videoState == VideoState::PLAYING) {
@@ -57,7 +60,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         listener->onError(VIDEO_ERROR_OPEN);
         return VIDEO_STATUS_FAILURE
     }
-    // Query video stream info
+    // Query media stream info
     result = avformat_find_stream_info(format_context, NULL);
     if (result < 0) {
         LOGE(TAG, " : Can not find video file stream info");
@@ -65,8 +68,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         return VIDEO_STATUS_FAILURE
     }
 
-
-    // Find decoder
+    // Find decoder index
     for (int i = 0; i < format_context->nb_streams; i++) {
         if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             video_stream_index = i;
@@ -77,39 +79,25 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     if (video_stream_index == -1) {
         LOGE(TAG, " : Can not find video stream");
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM);
-        return VIDEO_STATUS_FAILURE
-    }
-    // init decoder context
-    video_codec_context = format_context->streams[video_stream_index]->codec;
-    audio_codec_context = format_context->streams[video_stream_index]->codec;
-
-    video_codec = avcodec_find_decoder(video_codec_context->codec_id);
-    if (video_codec == NULL) {
-        return VIDEO_ERROR_FIND_DECODER;
+        return VIDEO_ERROR_FIND_VIDEO_STREAM;
     }
 
-    if (audio_codec == NULL) {
-        return VIDEO_ERROR_FIND_DECODER;
-    }
-    // Open video decoder
-    result = avcodec_open2(video_codec_context, video_codec, NULL);
-    audio_codec = avcodec_find_decoder(audio_codec_context->codec_id);
-    if (result < 0) {
-        LOGE(TAG, ": Can not find video stream");
-        return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
-    }
-    videoWidth = video_codec_context->width;
-    videoHeight = video_codec_context->height;
-    // Init ANativeWindow
-    native_window = ANativeWindow_fromSurface(env, surface);
-    if (native_window == NULL) {
-        LOGE(TAG, " : Can not create native window");
-        return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
+    if (audio_stream_index == -1) {
+        LOGE(TAG, " : Can not find audio stream");
+        listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM);
+        return VIDEO_ERROR_FIND_VIDEO_STREAM;
     }
 
-    //Init Audio
-    //TODO
+    const int succeed = VIDEO_STATUS_SUCCESS;
 
+    int status = VideoConsumer::initResource(format_context, video_stream_index, env, surface);
+    if (succeed != status) {
+        return status;
+    }
+    status = AudioConsumer::initResource(format_context, audio_stream_index);
+    if (succeed != status) {
+        return status;
+    }
 
     avformat_close_input(&format_context);
     env->ReleaseStringUTFChars(javaPath, path);
@@ -121,10 +109,3 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     return VIDEO_STATUS_SUCCESS
 }
 
-int initInputFormatContext(MediaProducerSingleton *singleton, const char *javaPath) {
-
-}
-
-int initCodecContext(MediaProducerSingleton *singleton) {
-
-}

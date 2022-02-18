@@ -160,7 +160,7 @@
  * Reading data from an opened AVFormatContext is done by repeatedly calling
  * av_read_frame() on it. Each call, if successful, will return an AVPacket
  * containing encoded data for one AVStream, identified by
- * AVPacket.stream_index. This packet may be passed straight into the libavcodec
+ * AVPacket.audio_stream_index. This packet may be passed straight into the libavcodec
  * decoding functions avcodec_send_packet() or avcodec_decode_subtitle2() if the
  * caller wishes to decode the data.
  *
@@ -729,7 +729,7 @@ typedef struct AVInputFormat {
 
     /**
      * Seek to a given timestamp relative to the frames in
-     * stream component stream_index.
+     * stream component audio_stream_index.
      * @param stream_index Must not be -1.
      * @param flags Selects which direction should be preferred if no exact
      *              match is available.
@@ -739,7 +739,7 @@ typedef struct AVInputFormat {
                      int stream_index, int64_t timestamp, int flags);
 
     /**
-     * Get the next timestamp in stream[stream_index].time_base units.
+     * Get the next timestamp in stream[audio_stream_index].time_base units.
      * @return the timestamp or AV_NOPTS_VALUE if an error occurred
      */
     int64_t (*read_timestamp)(struct AVFormatContext *s, int stream_index,
@@ -2332,10 +2332,10 @@ int av_read_frame(AVFormatContext *s, AVPacket *pkt);
 
 /**
  * Seek to the keyframe at timestamp.
- * 'timestamp' in 'stream_index'.
+ * 'timestamp' in 'audio_stream_index'.
  *
  * @param s media file handle
- * @param stream_index If stream_index is (-1), a default
+ * @param stream_index If audio_stream_index is (-1), a default
  * stream is selected, and timestamp is automatically converted
  * from AV_TIME_BASE units to the stream specific time_base.
  * @param timestamp Timestamp in AVStream.time_base units
@@ -2355,9 +2355,9 @@ int av_seek_frame(AVFormatContext *s, int stream_index, int64_t timestamp,
  * If flags contain AVSEEK_FLAG_BYTE, then all timestamps are in bytes and
  * are the file position (this may not be supported by all demuxers).
  * If flags contain AVSEEK_FLAG_FRAME, then all timestamps are in frames
- * in the stream with stream_index (this may not be supported by all demuxers).
- * Otherwise all timestamps are in units of the stream selected by stream_index
- * or if stream_index is -1, in AV_TIME_BASE units.
+ * in the stream with audio_stream_index (this may not be supported by all demuxers).
+ * Otherwise all timestamps are in units of the stream selected by audio_stream_index
+ * or if audio_stream_index is -1, in AV_TIME_BASE units.
  * If flags contain AVSEEK_FLAG_ANY, then non-keyframes are treated as
  * keyframes (this may not be supported by all demuxers).
  * If flags contain AVSEEK_FLAG_BACKWARD, it is ignored.
@@ -2489,7 +2489,7 @@ int avformat_init_output(AVFormatContext *s, AVDictionary **options);
  *            muxers that buffer up data internally before writing it to the
  *            output.
  *            <br>
- *            Packet's @ref AVPacket.stream_index "stream_index" field must be
+ *            Packet's @ref AVPacket.audio_stream_index "audio_stream_index" field must be
  *            set to the index of the corresponding stream in @ref
  *            AVFormatContext.streams "s->streams".
  *            <br>
@@ -2533,7 +2533,7 @@ int av_write_frame(AVFormatContext *s, AVPacket *pkt);
  *            This parameter can be NULL (at any time, not just at the end), to
  *            flush the interleaving queues.
  *            <br>
- *            Packet's @ref AVPacket.stream_index "stream_index" field must be
+ *            Packet's @ref AVPacket.audio_stream_index "audio_stream_index" field must be
  *            set to the index of the corresponding stream in @ref
  *            AVFormatContext.streams "s->streams".
  *            <br>

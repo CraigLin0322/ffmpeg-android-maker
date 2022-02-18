@@ -22,9 +22,7 @@ namespace AudioConsumer {
 
     void releaseResource();
 
-    void initResource();
-
-    void initBufferQueue(int rate, int channel, int bitsPerSample);
+    int initResource(AVFormatContext *formatContext, int index);
 
     void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context);
 

@@ -2,6 +2,27 @@
 
 using namespace AudioConsumer;
 
+AVCodecContext *audio_codec_context;
+AVFormatContext *avFormatContext;
+int audio_stream_index = -1;
+AVCodec *audio_codec;
+
+
+//Encapsulate for raw data
+AVPacket *packet;
+//Encapsulate for decoded data
+AVFrame *frame;
+SwrContext *swrContext;
+//Output buffer
+uint8_t *out_buffer;
+//Channel_layout
+const uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
+//Output sampleSize, basically for 16
+const enum AVSampleFormat sampleFormat = AV_SAMPLE_FMT_S16;
+int out_sample_rate;
+int out_channel_nb;
+
+
 const char *AUDIO_TAG = "VideoConsumer";
 SLresult audioResult;
 //Object of engine
@@ -69,8 +90,6 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     swr_init(swrContext);
     //    获取通道数  2
     int out_channer_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
-    AudioConsumer::initBufferQueue(audio_codec_context->sample_rate, audio_codec_context->channels,
-                                   SL_PCMSAMPLEFORMAT_FIXED_16);
     int got_frame;
     while (av_read_frame(format_context, packet) >= 0) {
         if (packet->stream_index == stream_index) {
@@ -115,7 +134,7 @@ void AudioConsumer::bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueIt
     }
 }
 
-void AudioConsumer::initBufferQueue(int rate, int channel, int bitsPerSample) {
+void initBufferQueue(int rate, int channel, int bitsPerSample) {
     //Init audio buffer queue
 
     SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
@@ -165,8 +184,22 @@ void AudioConsumer::initBufferQueue(int rate, int channel, int bitsPerSample) {
     audioResult = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
 }
 
-//https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
-void AudioConsumer::initResource() {
+void prepareDecodeContext() {
+    packet = (AVPacket *) av_malloc(sizeof(AVPacket));
+    frame = av_frame_alloc();
+    swrContext = swr_alloc();
+    out_buffer = (uint8_t *) av_malloc(44100 * 2);
+    out_sample_rate = audio_codec_context->sample_rate;
+    //swr_alloc_set_opts将PCM源文件的采样格式转换为自己希望的采样格式
+    swr_alloc_set_opts(swrContext, out_ch_layout, sampleFormat, out_sample_rate,
+                       audio_codec_context->channel_layout, audio_codec_context->sample_fmt,
+                       audio_codec_context->sample_rate, 0,
+                       NULL);
+    swr_init(swrContext);
+    out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+}
+
+void initAudioEngine() {
     audioResult = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
     if (audioResult != SL_RESULT_SUCCESS) {
 
@@ -196,6 +229,34 @@ void AudioConsumer::initResource() {
     audioResult = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(outputMixEnvReverb,
                                                                           &reverbSettings);
 }
+
+//https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
+int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
+
+    int result;
+    audio_stream_index = index;
+    avFormatContext = formatContext;
+    audio_codec_context = avFormatContext->streams[audio_stream_index]->codec;
+    audio_codec = avcodec_find_decoder(audio_codec_context->codec_id);
+    if (audio_codec == NULL) {
+        return VIDEO_ERROR_FIND_DECODER;
+    }
+    result = avcodec_open2(audio_codec_context, audio_codec, NULL);
+    if (result < 0) {
+        LOGE(AUDIO_TAG, ": Can not find audio stream");
+        return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
+    }
+
+    initAudioEngine();
+
+    initBufferQueue(audio_codec_context->sample_rate, audio_codec_context->channels, SL_PCMSAMPLEFORMAT_FIXED_16);
+
+    prepareDecodeContext();
+
+    return VIDEO_STATUS_SUCCESS
+
+}
+
 
 void AudioConsumer::releaseResource() {
 

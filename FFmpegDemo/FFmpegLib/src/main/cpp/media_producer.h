@@ -60,8 +60,6 @@ protected:
     int audio_stream_index;
     AVCodec *video_codec;
     AVCodec *audio_codec;
-    int videoWidth;
-    int videoHeight;
     ANativeWindow *native_window;
     SwrContext *swrContext;
 
@@ -75,9 +73,5 @@ protected:
     // And any other protected methods.
     void reset();
 };
-
-int initInputFormatContext(MediaProducerSingleton *singleton, const char *javaPath);
-
-int initCodecContext(MediaProducerSingleton *singleton);
 
 #endif // __MEDIA_PRODUCER_H__
