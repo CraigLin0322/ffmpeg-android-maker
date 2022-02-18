@@ -4,8 +4,7 @@
 #include "media_consumer.h"
 
 namespace VideoConsumer {
-    int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index) ;
+    int decodeStream() ;
 
     int play(JNIEnv *env, VideoPlayListener *listener,
              jstring javaPath, jobject surface) ;

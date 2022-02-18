@@ -4,8 +4,8 @@ package com.chadlin.ffmpeglib;
 public class Constants {
 
     //Status for initializing
-    public static final int INITIALIZE_SUCCEED= 0;
-    public static final int INITIALIZE_FAIL =1;
+    public static final int INITIALIZE_SUCCEED= -1111;
+    public static final int INITIALIZE_FAIL = 1112;
 
     //Status for playing video
     public static final int VIDEO_STATUS_SUCCESS = 0;

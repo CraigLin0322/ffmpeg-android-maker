@@ -11,40 +11,9 @@ AVFormatContext *format_context;
 AVCodec *video_codec;
 int video_stream_index = -1;
 
-int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                                int stream_index) {
-    // init decoder context
-    AVCodecContext *video_codec_context = avcodec_alloc_context3(NULL);
+int VideoConsumer::decodeStream() {
+    int result;
 
-    avcodec_parameters_to_context(video_codec_context,
-                                  format_context->streams[stream_index]->codecpar);
-    AVCodec *video_codec = avcodec_find_decoder(video_codec_context->codec_id);
-    if (video_codec == NULL) {
-        return VIDEO_ERROR_FIND_DECODER;
-    }
-    int result = -1;
-    // Open video decoder
-    result = avcodec_open2(video_codec_context, video_codec, NULL);
-    if (result < 0) {
-        LOGE(TAG, ": Can not find video stream");
-        return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
-    }
-    int videoWidth = video_codec_context->width;
-    int videoHeight = video_codec_context->height;
-    // Init ANativeWindow
-    ANativeWindow *native_window = ANativeWindow_fromSurface(env, surface);
-    if (native_window == NULL) {
-        LOGE(TAG, " : Can not create native window");
-        return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
-    }
-
-    result = ANativeWindow_setBuffersGeometry(native_window, videoWidth, videoHeight,
-                                              WINDOW_FORMAT_RGBA_8888);
-    if (result < 0) {
-        LOGE(TAG, " : Can not set native window buffer");
-        ANativeWindow_release(native_window);
-        return VIDEO_ERROR_SET_NATIVE_WINDOW_BUFFER;
-    }
     ANativeWindow_Buffer window_buffer;
     // 声明数据容器 有3个
     // R5 解码前数据容器 Packet 编码数据
@@ -67,17 +36,15 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
             SWS_BICUBIC, NULL, NULL, NULL);
 
     //Get duration about Video
-//        long duration = 0;
-//        if (avFormatContext->duration != AV_NOPTS_VALUE) {
-//            duration = avFormatContext->duration / AV_TIME_BASE;
-//        }
-    AVRational time_base = format_context->streams[stream_index]->time_base;
+    long duration = 0;
+    if (format_context->duration != AV_NOPTS_VALUE) {
+        duration = format_context->duration / AV_TIME_BASE;
+    }
+    AVRational time_base = video_codec_context->time_base;
     double timestamp = 0l;
-    // 开始读取帧
+    // Read frame
     while (av_read_frame(format_context, packet) >= 0) {
-        // 匹配视频流
-        if (packet->stream_index == stream_index) {
-            // 解码
+        if (packet->stream_index == video_stream_index) {
             result = avcodec_send_packet(video_codec_context, packet);
             if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
                 LOGE(TAG, " : codec step 1 fail");
@@ -89,8 +56,7 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
                 return VIDEO_ERROR_RECEIVE_FRAME;
             }
             timestamp = frame->best_effort_timestamp * av_q2d(time_base);
-//                listener->onProgress(duration, timestamp);
-            // 数据格式转换
+//            listener->onProgress(duration, timestamp);
             result = sws_scale(
                     data_convert_context,
                     (const uint8_t *const *) frame->data, frame->linesize,
@@ -100,7 +66,7 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
                 LOGE("Player Error ", ": data convert fail");
                 return VIDEO_ERROR_CONVERT_DATA;
             }
-            // 播放
+            // play
             result = ANativeWindow_lock(native_window, &window_buffer, NULL);
             if (result < 0) {
                 LOGE(TAG, " : Can not lock native window");
@@ -118,7 +84,7 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
                 ANativeWindow_unlockAndPost(native_window);
             }
         }
-        // 释放 packet 引用
+        // release packet reference
         av_packet_unref(packet);
     }
     sws_freeContext(data_convert_context);
@@ -163,6 +129,14 @@ int VideoConsumer::initResource(AVFormatContext *formatContext, int index, JNIEn
     if (native_window == NULL) {
         LOGE(TAG, " : Can not create native window");
         return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
+    }
+
+    result = ANativeWindow_setBuffersGeometry(native_window, videoWidth, videoHeight,
+                                              WINDOW_FORMAT_RGBA_8888);
+    if (result < 0) {
+        LOGE(TAG, " : Can not set native window buffer");
+        ANativeWindow_release(native_window);
+        return VIDEO_ERROR_SET_NATIVE_WINDOW_BUFFER;
     }
     return VIDEO_STATUS_SUCCESS;
 }

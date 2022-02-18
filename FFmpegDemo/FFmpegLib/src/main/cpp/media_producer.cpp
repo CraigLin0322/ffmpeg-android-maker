@@ -99,6 +99,11 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         return status;
     }
 
+    status = VideoConsumer::decodeStream();
+    if (succeed != status) {
+        return status;
+    }
+
     avformat_close_input(&format_context);
     env->ReleaseStringUTFChars(javaPath, path);
 

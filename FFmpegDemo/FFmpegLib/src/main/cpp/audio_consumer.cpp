@@ -199,35 +199,37 @@ void prepareDecodeContext() {
     out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
 }
 
-void initAudioEngine() {
-    audioResult = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+int initAudioEngine() {
+    SLresult result;
+    result = slCreateEngine(&engineObject, 0, nullptr,
+                            0, nullptr, nullptr);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, nullptr,
-                                                   nullptr);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, 0, 0);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
-                                                   &outputMixEnvReverb);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
+                                              &outputMixEnvReverb);
+    if (result != SL_RESULT_SUCCESS) {
+        return result;
     }
-    audioResult = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(outputMixEnvReverb,
-                                                                          &reverbSettings);
+    result = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(
+            outputMixEnvReverb, &reverbSettings);
+    return result;
 }
 
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
@@ -249,7 +251,8 @@ int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
 
     initAudioEngine();
 
-    initBufferQueue(audio_codec_context->sample_rate, audio_codec_context->channels, SL_PCMSAMPLEFORMAT_FIXED_16);
+    initBufferQueue(audio_codec_context->sample_rate, audio_codec_context->channels,
+                    SL_PCMSAMPLEFORMAT_FIXED_16);
 
     prepareDecodeContext();
 
