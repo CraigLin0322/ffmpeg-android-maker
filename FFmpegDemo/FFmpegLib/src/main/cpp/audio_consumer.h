@@ -7,61 +7,27 @@
 #include "SLES/OpenSLES.h"
 #include "SLES/OpenSLES_Android.h"
 
-class AudioConsumer : public virtual MediaConsumer {
-protected:
-    const char *TAG = "VideoConsumer";
-    SLresult audioResult;
-    //Object of engine
-    SLObjectItf engineObject = nullptr;
-    SLEngineItf engineEngine;
-
-    //Object of mixer
-    SLObjectItf outputMixObject = nullptr;
-    SLEnvironmentalReverbItf outputMixEnvReverb = nullptr;
-
-    //Object of buffer
-    SLObjectItf bpPlayerObject = nullptr;
-    SLPlayItf bqPlayerPlay;
-    SLAndroidSimpleBufferQueueItf bpPlayerBufferQueue;
-    SLEffectSendItf  bpPlayerEffectSend;
-    SLVolumeItf  bqPlayerVolume;
-
-    //Audio effect
-
-    const SLEnvironmentalReverbSettings reverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
-    void * openBuffer;
-    size_t bufferSize;
-    uint8_t * outputBuffer;
-    size_t outputBufferSize;
-
-public:
-
+namespace AudioConsumer {
     int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index) override;
+                     int stream_index);
 
     int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface) const override;
+             jstring javaPath, jobject surface);
 
-    void seekTo(JNIEnv *env, jlong position) const override;
+    void seekTo(JNIEnv *env, jlong position);
 
-    void pause(JNIEnv *env) const override;
+    void pause(JNIEnv *env);
 
-    void resume(JNIEnv *env) const override;
+    void resume(JNIEnv *env);
 
-    void releaseResource() override;
+    void releaseResource();
 
-    void initResource() override;
+    void initResource();
 
-private:
-    virtual void initBufferQueue(int rate, int channel,int bitsPerSample) = 0;
+    void initBufferQueue(int rate, int channel, int bitsPerSample);
 
-    virtual void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) = 0;
+    void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context);
 
-
-    ~AudioConsumer() {
-
-    }
-};
-
+}
 
 #endif // __AUDIO_CONSUMER_H__

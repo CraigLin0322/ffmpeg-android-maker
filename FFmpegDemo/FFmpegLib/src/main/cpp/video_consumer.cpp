@@ -1,5 +1,7 @@
 #include "video_consumer.h"
 
+using namespace VideoConsumer;
+const char *TAG = "VideoConsumer";
 
 int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
                                 int stream_index) {
@@ -121,11 +123,11 @@ int VideoConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     return VIDEO_STATUS_SUCCESS
 }
 
-void VideoConsumer::resume(JNIEnv *env) const {
+void VideoConsumer::resume(JNIEnv *env) {
 
 }
 
-void VideoConsumer::pause(JNIEnv *env) const {
+void VideoConsumer::pause(JNIEnv *env) {
 
 }
 
@@ -138,10 +140,10 @@ void VideoConsumer::releaseResource() {
 }
 
 int VideoConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
-                        jobject surface) const {
+                        jobject surface) {
 
 }
 
-void VideoConsumer::seekTo(JNIEnv *env, jlong position) const {
+void VideoConsumer::seekTo(JNIEnv *env, jlong position) {
 
 }

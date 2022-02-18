@@ -54,8 +54,6 @@ public:
 
 protected:
     VideoState videoState;
-    MediaConsumer *videoConsumer;
-    MediaConsumer *audioConsumer;
     AVCodecContext *video_codec_context;
     AVCodecContext *audio_codec_context;
     int video_stream_index;
@@ -64,18 +62,14 @@ protected:
     AVCodec *audio_codec;
     int videoWidth;
     int videoHeight;
-    ANativeWindow  *native_window;
-    SwrContext * swrContext;
+    ANativeWindow *native_window;
+    SwrContext *swrContext;
 
 
     MediaProducerSingleton() {
-        videoConsumer = new VideoConsumer();
-        audioConsumer = new AudioConsumer();
     }
 
     ~MediaProducerSingleton() {
-        delete audioConsumer;
-        delete videoConsumer;
     }
 
     // And any other protected methods.

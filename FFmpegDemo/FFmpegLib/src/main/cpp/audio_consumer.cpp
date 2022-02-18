@@ -1,5 +1,32 @@
 #include "audio_consumer.h"
 
+using namespace AudioConsumer;
+
+const char *AUDIO_TAG = "VideoConsumer";
+SLresult audioResult;
+//Object of engine
+SLObjectItf engineObject = nullptr;
+SLEngineItf engineEngine;
+
+//Object of mixer
+SLObjectItf outputMixObject = nullptr;
+SLEnvironmentalReverbItf outputMixEnvReverb = nullptr;
+
+//Object of buffer
+SLObjectItf bpPlayerObject = nullptr;
+SLPlayItf bqPlayerPlay;
+SLAndroidSimpleBufferQueueItf bpPlayerBufferQueue;
+SLEffectSendItf bpPlayerEffectSend;
+SLVolumeItf bqPlayerVolume;
+
+//Audio effect
+
+const SLEnvironmentalReverbSettings reverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
+void *openBuffer;
+size_t bufferSize;
+uint8_t *outputBuffer;
+size_t outputBufferSize;
+
 int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
                                 int stream_index) {
     //TODO change error flag for Audio
@@ -15,7 +42,7 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     // Open video decoder
     result = avcodec_open2(audio_codec_context, audio_codec, NULL);
     if (result < 0) {
-        LOGE(TAG, ": Can not find video stream");
+        LOGE(AUDIO_TAG, ": Can not find video stream");
         return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
     }
     //申请avpakcet，装解码前的数据
@@ -67,22 +94,22 @@ int AudioConsumer::decodeStream(JNIEnv *env, jobject surface, AVFormatContext *f
     return VIDEO_STATUS_SUCCESS
 }
 
-void AudioConsumer::resume(JNIEnv *env) const {
+void AudioConsumer::resume(JNIEnv *env) {
 
 }
 
-void AudioConsumer::pause(JNIEnv *env) const {
+void AudioConsumer::pause(JNIEnv *env) {
 
 }
 
 void AudioConsumer::bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) {
     int bufferSize = 0;
-    getPcm(&openBuffer, &bufferSize);
+//    getPcm(&openBuffer, &bufferSize);
     if (nullptr != &openBuffer && 0 != &bufferSize) {
         audioResult = (*bpPlayerBufferQueue)->Enqueue(bpPlayerBufferQueue, openBuffer, bufferSize);
         if (audioResult < 0) {
 
-        } else{
+        } else {
             //frame_count++
         }
     }
@@ -91,7 +118,8 @@ void AudioConsumer::bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueIt
 void AudioConsumer::initBufferQueue(int rate, int channel, int bitsPerSample) {
     //Init audio buffer queue
 
-    SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,2};
+    SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
+                                                          2};
     SLDataFormat_PCM formatPcm;
     formatPcm.formatType = SL_DATAFORMAT_PCM;
     formatPcm.numChannels = (SLuint32) channel;
@@ -125,8 +153,9 @@ void AudioConsumer::initBufferQueue(int rate, int channel, int bitsPerSample) {
     }
     (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_PLAY, &bqPlayerPlay);
     (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_BUFFERQUEUE, &bpPlayerBufferQueue);
+
     audioResult = (*bpPlayerBufferQueue)->RegisterCallback(bpPlayerBufferQueue,
-                                                           callback,
+                                                           bpPlayerCallback,
                                                            nullptr);
     if (audioResult != SL_RESULT_SUCCESS) {
 
@@ -173,10 +202,10 @@ void AudioConsumer::releaseResource() {
 }
 
 int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
-                        jobject surface) const {
+                        jobject surface) {
 
 }
 
-void AudioConsumer::seekTo(JNIEnv *env, jlong position) const {
+void AudioConsumer::seekTo(JNIEnv *env, jlong position) {
 
 }

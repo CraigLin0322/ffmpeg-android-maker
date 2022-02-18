@@ -3,30 +3,22 @@
 
 #include "media_consumer.h"
 
-class VideoConsumer : public MediaConsumer {
-protected:
-    const char *TAG = "VideoConsumer";
-public:
+namespace VideoConsumer {
     int decodeStream(JNIEnv *env, jobject surface, AVFormatContext *format_context,
-                     int stream_index) override;
+                     int stream_index) ;
 
     int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface) const override;
+             jstring javaPath, jobject surface) ;
 
-    void seekTo(JNIEnv *env, jlong position) const override;
+    void seekTo(JNIEnv *env, jlong position) ;
 
-    void pause(JNIEnv *env) const override;
+    void pause(JNIEnv *env)  ;
 
-    void resume(JNIEnv *env) const override;
+    void resume(JNIEnv *env)  ;
 
-    void releaseResource() override;
+    void releaseResource() ;
 
-    void initResource() override;
-
-    ~VideoConsumer() {
-
-    }
-
-};
+    void initResource() ;
+}
 
 #endif // __VIDEO_CONSUMER_H__
