@@ -19,6 +19,7 @@ extern "C" {
 #include "libswscale/swscale.h"
 #include "libavutil/imgutils.h"
 #include <libswresample/swresample.h>
+#include <libavutil/opt.h>
 
 #ifdef __cplusplus
 }
