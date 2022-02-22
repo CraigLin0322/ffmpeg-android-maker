@@ -21,7 +21,7 @@ const uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
 const enum AVSampleFormat sampleFormat = AV_SAMPLE_FMT_S16;
 int out_sample_rate;
 int out_channel_nb;
-
+int frame_count = 0;
 
 static const char *TAG = "VideoConsumer";
 SLresult audioResult;
@@ -34,9 +34,9 @@ SLObjectItf outputMixObject = nullptr;
 SLEnvironmentalReverbItf outputMixEnvReverb = nullptr;
 
 //Object of buffer
-SLObjectItf bpPlayerObject = nullptr;
+SLObjectItf bqPlayerObject = nullptr;
 SLPlayItf bqPlayerPlay;
-SLAndroidSimpleBufferQueueItf bpPlayerBufferQueue;
+SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
 SLEffectSendItf bpPlayerEffectSend;
 SLVolumeItf bqPlayerVolume;
 
@@ -48,17 +48,6 @@ void *openBuffer;
 size_t bufferSize;
 size_t outputBufferSize;
 
-int AudioConsumer::decodeStream() {
-    return VIDEO_STATUS_SUCCESS
-}
-
-void AudioConsumer::resume(JNIEnv *env) {
-
-}
-
-void AudioConsumer::pause(JNIEnv *env) {
-
-}
 
 int getPcm(void **pcm, size_t *pcmSize) {
     int frameFinish = 0;
@@ -67,8 +56,9 @@ int getPcm(void **pcm, size_t *pcmSize) {
         if (packet->stream_index == audio_stream_index) {
             avcodec_decode_audio4(audio_codec_context, frame, &frameFinish, packet);
             if (frameFinish) {
-                data_size = av_samples_get_buffer_size(NULL, out_channel_nb, frame->nb_samples,
-                                                       AV_SAMPLE_FMT_S16, 1);
+                data_size = av_samples_get_buffer_size(frame->linesize, audio_codec_context->channels,
+                                                       frame->nb_samples,
+                                                       audio_codec_context->sample_fmt, 1);
                 if (data_size > outputBufferSize) {
                     outputBufferSize = data_size;
                     out_buffer = (uint8_t *) realloc(out_buffer,
@@ -78,19 +68,21 @@ int getPcm(void **pcm, size_t *pcmSize) {
                             frame->nb_samples);
                 *pcm = out_buffer;
                 *pcmSize = data_size;
+                break;
             }
         }
     }
+    return 0;
 }
 
 void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) {
     getPcm(&openBuffer, &bufferSize);
     if (nullptr != &openBuffer && 0 != &bufferSize) {
-        audioResult = (*bpPlayerBufferQueue)->Enqueue(bpPlayerBufferQueue, openBuffer, bufferSize);
+        audioResult = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, openBuffer, bufferSize);
         if (audioResult < 0) {
 
         } else {
-            //frame_count++
+            frame_count++;
         }
     }
 }
@@ -98,51 +90,50 @@ void bpPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *contex
 void initBufferQueue(int rate, int channel, int bitsPerSample) {
     //Init audio buffer queue
 
-    SLDataLocator_AndroidSimpleBufferQueue bufferQueue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
-                                                          2};
-    SLDataFormat_PCM formatPcm;
-    formatPcm.formatType = SL_DATAFORMAT_PCM;
-    formatPcm.numChannels = (SLuint32) channel;
-    formatPcm.bitsPerSample = (SLuint32) bitsPerSample;
-    formatPcm.samplesPerSec = (SLuint32) (rate * 1000);
-    formatPcm.containerSize = 16;
-    if (channel == 2) {
-        formatPcm.channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
-    } else {
-        formatPcm.channelMask = SL_SPEAKER_FRONT_CENTER;
-    }
+    SLresult result;
 
-    formatPcm.endianness = SL_BYTEORDER_LITTLEENDIAN;
-    SLDataSource audioSrc = {&bufferQueue, &formatPcm};
+    //config audio source
+    SLDataLocator_AndroidSimpleBufferQueue buffer_queue = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,
+                                                           2};
+    SLDataFormat_PCM format_pcm;
+    format_pcm.formatType = SL_DATAFORMAT_PCM;
+    format_pcm.numChannels = (SLuint32) channel;
+    format_pcm.bitsPerSample = (SLuint32) bitsPerSample;
+    format_pcm.samplesPerSec = (SLuint32) (rate * 1000);
+    format_pcm.containerSize = 16;
+    if (channel == 2)
+        format_pcm.channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+    else
+        format_pcm.channelMask = SL_SPEAKER_FRONT_CENTER;
+    format_pcm.endianness = SL_BYTEORDER_LITTLEENDIAN;
+    SLDataSource audioSrc = {&buffer_queue, &format_pcm};
 
     SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
-    SLDataSink audioSink{&loc_outmix, nullptr};
+    SLDataSink audioSnk = {&loc_outmix, nullptr};
 
     const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE, SL_IID_EFFECTSEND, SL_IID_VOLUME};
     const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
-
-    audioResult = (*engineEngine)->CreateAudioPlayer(engineEngine, &bpPlayerObject,
-                                                     &audioSrc, &audioSink, 3, ids, req);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*engineEngine)->CreateAudioPlayer(engineEngine, &bqPlayerObject, &audioSrc, &audioSnk,
+                                                3, ids, req);
+    if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "outputMixObject->GetInterface error=%d", result);
+        return;
     }
-
-    audioResult = (*bpPlayerObject)->Realize(bpPlayerObject, SL_BOOLEAN_FALSE);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    result = (*bqPlayerObject)->Realize(bqPlayerObject, SL_BOOLEAN_FALSE);
+    if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "bqPlayerObject->Realize error=%d", result);
+        return ;
     }
-    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_PLAY, &bqPlayerPlay);
-    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_BUFFERQUEUE, &bpPlayerBufferQueue);
-
-    audioResult = (*bpPlayerBufferQueue)->RegisterCallback(bpPlayerBufferQueue,
-                                                           bpPlayerCallback,
-                                                           nullptr);
-    if (audioResult != SL_RESULT_SUCCESS) {
-
+    (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_PLAY, &bqPlayerPlay);
+    (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_BUFFERQUEUE, &bqPlayerBufferQueue);
+    result = (*bqPlayerBufferQueue)->RegisterCallback(bqPlayerBufferQueue, bpPlayerCallback, nullptr);
+    if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "bqPlayerBufferQueue->RegisterCallback error=%d", result);
+        return ;
     }
-    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_EFFECTSEND, &bpPlayerEffectSend);
-    (*bpPlayerObject)->GetInterface(bpPlayerObject, SL_IID_VOLUME, &bqPlayerVolume);
-    audioResult = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
+    (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_EFFECTSEND, &bpPlayerEffectSend);
+    (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_VOLUME, &bqPlayerVolume);
+    result = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
 }
 
 void prepareDecodeContext() {
@@ -152,10 +143,20 @@ void prepareDecodeContext() {
     out_buffer = (uint8_t *) av_malloc(44100 * 2);
     out_sample_rate = audio_codec_context->sample_rate;
     //swr_alloc_set_opts将PCM源文件的采样格式转换为自己希望的采样格式
-    swr_alloc_set_opts(swrContext, out_ch_layout, sampleFormat, out_sample_rate,
+    swr_alloc_set_opts(swrContext,  audio_codec_context->channel_layout, sampleFormat, audio_codec_context->sample_rate,
                        audio_codec_context->channel_layout, audio_codec_context->sample_fmt,
                        audio_codec_context->sample_rate, 0,
                        NULL);
+//    aFrame = av_frame_alloc();
+//    swr = swr_alloc();
+//    av_opt_set_int(swr, "in_channel_layout", aCodecCtx->channel_layout, 0);
+//    av_opt_set_int(swr, "out_channel_layout", aCodecCtx->channel_layout, 0);
+//    av_opt_set_int(swr, "in_sample_rate", aCodecCtx->sample_rate, 0);
+//    av_opt_set_int(swr, "out_sample_rate", aCodecCtx->sample_rate, 0);
+//    av_opt_set_sample_fmt(swr, "in_sample_fmt", aCodecCtx->sample_fmt, 0);
+//    av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+//    swr_init(swr);
+
     swr_init(swrContext);
     out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
 }
@@ -165,31 +166,39 @@ int initAudioEngine() {
     result = slCreateEngine(&engineObject, 0, nullptr,
                             0, nullptr, nullptr);
     if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "slCreateEngine error=%d", result);
         return result;
     }
     result = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
     if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "engineObject->Realize error=%d", result);
         return result;
     }
     result = (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
     if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "engineObject->GetInterface error=%d", result);
         return result;
     }
     result = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, 0, 0);
     if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "engineEngine->CreateOutputMix error=%d", result);
         return result;
     }
     result = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
     if (result != SL_RESULT_SUCCESS) {
+        LOGE(TAG, "outputMixObject->Realize error=%d", result);
         return result;
     }
     result = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
                                               &outputMixEnvReverb);
-    if (result != SL_RESULT_SUCCESS) {
+    if (result == SL_RESULT_SUCCESS) {
+        result = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(
+                outputMixEnvReverb, &reverbSettings);
+    } else {
+        LOGE(TAG, "outputMixObject->GetInterface error=%d", result);
         return result;
     }
-    result = (*outputMixEnvReverb)->SetEnvironmentalReverbProperties(
-            outputMixEnvReverb, &reverbSettings);
+
     return result;
 }
 
@@ -227,6 +236,7 @@ void AudioConsumer::releaseResource() {
     av_free(out_buffer);
     av_frame_free(&frame);
     av_packet_free(&packet);
+    frame_count = 0;
 }
 
 int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
@@ -235,5 +245,19 @@ int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPa
 }
 
 void AudioConsumer::seekTo(JNIEnv *env, jlong position) {
+
+}
+
+
+int AudioConsumer::decodeStream() {
+    bpPlayerCallback(bqPlayerBufferQueue, nullptr);
+    return VIDEO_STATUS_SUCCESS
+}
+
+void AudioConsumer::resume(JNIEnv *env) {
+
+}
+
+void AudioConsumer::pause(JNIEnv *env) {
 
 }

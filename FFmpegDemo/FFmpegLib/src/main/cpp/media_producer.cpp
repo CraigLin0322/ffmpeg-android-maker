@@ -90,16 +90,17 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
 
     const int succeed = VIDEO_STATUS_SUCCESS;
 
-    int status = VideoConsumer::initResource(format_context, video_stream_index, env, surface);
-    if (succeed != status) {
-        return status;
-    }
+    int status;
+//            VideoConsumer::initResource(format_context, video_stream_index, env, surface);
+//    if (succeed != status) {
+//        return status;
+//    }
     status = AudioConsumer::initResource(format_context, audio_stream_index);
     if (succeed != status) {
         return status;
     }
 
-    status = VideoConsumer::decodeStream();
+    status = AudioConsumer::decodeStream();
     if (succeed != status) {
         return status;
     }

@@ -1,5 +1,6 @@
 package com.chadlin.ffmpegdemo;
 
+import android.Manifest;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
@@ -58,7 +59,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Log.e(TAG, "onError=" + msg);
             }
         });
+        initPermission();
     }
+
+    private void initPermission() {
+        PermissionService service = new PermissionService();
+        service.checkPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO);
+
+    }
+
+
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
     private List<VideoItem> readVideoFromLocal() {
