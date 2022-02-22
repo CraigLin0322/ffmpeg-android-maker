@@ -1,5 +1,8 @@
 package com.chadlin.ffmpegdemo;
 
+import com.chadlin.ffmpeglib.FFmpegVideoManager;
+import com.chadlin.ffmpeglib.VideoPlayerCallback;
+
 import android.Manifest;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
@@ -9,14 +12,11 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 
+import java.util.List;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.chadlin.ffmpeglib.FFmpegVideoManager;
-import com.chadlin.ffmpeglib.VideoPlayerCallback;
-
-import java.util.List;
 
 /**
  * Token for pushing to Git: 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
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initPermission() {
         PermissionService service = new PermissionService();
         service.checkPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO);
+                Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO,Manifest.permission.MODIFY_AUDIO_SETTINGS);
 
     }
 

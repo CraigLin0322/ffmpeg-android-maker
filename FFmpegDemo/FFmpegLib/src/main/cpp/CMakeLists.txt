@@ -51,6 +51,7 @@ add_library(
         video_consumer.cpp
         audio_consumer.cpp
         video_player_listener.cpp
+        FFmpegMusic.cpp
         thread_helper.cpp)
 
 target_link_libraries(

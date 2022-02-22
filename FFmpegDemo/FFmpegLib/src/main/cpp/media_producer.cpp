@@ -70,9 +70,9 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
 
     // Find decoder index
     for (int i = 0; i < format_context->nb_streams; i++) {
-        if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if (format_context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
             video_stream_index = i;
-        } else if (format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+        } else if (format_context->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO) {
             audio_stream_index = i;
         }
     }

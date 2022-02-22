@@ -3,7 +3,7 @@
 #include "media_producer.h"
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
-
+#include "thread_helper.h"
 extern "C" {
 #include "libavcodec/avcodec.h"
 }
@@ -23,11 +23,15 @@ JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
                                           jstring local_path, jobject surface) {
-    if (playListener == nullptr) {
-        //Note that this env could be different everytime call from java side
-        playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
-    }
-    return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
+//    if (playListener == nullptr) {
+//        //Note that this env could be different everytime call from java side
+//        playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
+//    }
+//    return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
+createEngine();
+createMixVolume();
+    createPlayer();
+    return 1;
 }
 
 JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, jobject callback) {
