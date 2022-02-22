@@ -22,4 +22,6 @@ int createFFmpeg(int *rate,int *channel);
 int getPcm(void **pcm,size_t *pcm_size);
 
 void realseFFmpeg();
+
+//https://github.com/2016lc/FFmpegOpenSLES/blob/master/app/src/main/cpp/native-lib.cpp
 #endif
