@@ -4,6 +4,7 @@
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
 #include "thread_helper.h"
+
 extern "C" {
 #include "libavcodec/avcodec.h"
 }
@@ -28,9 +29,10 @@ JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
 //        playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
 //    }
 //    return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
-createEngine();
-createMixVolume();
-    createPlayer();
+    createEngine();
+    createMixVolume();
+    const char *path = env->GetStringUTFChars(local_path, 0);
+    createPlayer(path);
     return 1;
 }
 

@@ -10,9 +10,8 @@
  static int out_channer_nb;
  static int audio_stream_idx=-1;
 //opensl es调用 int * rate,int *channel
-int createFFmpeg(int *rate,int *channel){
+int createFFmpeg(const char * input,int *rate,int *channel){
     av_register_all();
-    char *input = "/storage/emulated/0/DCIM/Camera/20190726_173601.mp4";
     pFormatCtx = avformat_alloc_context();
     LOGE("Lujng %s",input);
     LOGE("xxx %p",pFormatCtx);

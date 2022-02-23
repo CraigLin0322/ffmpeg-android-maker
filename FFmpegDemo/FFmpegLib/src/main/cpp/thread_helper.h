@@ -65,11 +65,11 @@ void createMixVolume(){
 }
 
 //创建播放器
-void createPlayer(){
+void createPlayer(const char * path){
     //初始化ffmpeg
     int rate;
     int channels;
-    createFFmpeg(&rate,&channels);
+    createFFmpeg(path, &rate, &channels);
     LOGE("RATE %d",rate);
     LOGE("channels %d",channels);
     /*
