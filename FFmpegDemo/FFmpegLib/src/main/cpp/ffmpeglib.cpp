@@ -32,6 +32,7 @@ void* play(void *args) {
     auto *videoPlayListener = static_cast<VideoPlayListener *>(threadArgs->listener);
     MediaProducerSingleton::Instance().play(videoPlayListener, threadArgs->path,
                                             threadArgs->surface);
+    pthread_exit((void *) 2);
 }
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
