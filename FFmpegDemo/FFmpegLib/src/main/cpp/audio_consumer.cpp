@@ -2,55 +2,51 @@
 
 using namespace AudioConsumer;
 
-static AVFormatContext *pFormatCtx;
-static AVCodecContext *pCodecCtx;
-static AVCodec *pCodex;
-static AVPacket *packet;
-static AVFrame *frame;
-static SwrContext *swrContext;
-static uint8_t *out_buffer;
-static int out_channer_nb;
-static int audio_stream_idx = -1;
-static int rate;
-static int channel;
-static static const char *TAG = "AudioConsumer";
+AVFormatContext *format_context;
+AVCodecContext *av_codec_context;
+AVPacket *packet;
+AVFrame *frame;
+SwrContext *swr_context;
+uint8_t *out_buffer;
+int out_channel_nb;
+int audio_stream_idx = -1;
+int rate;
+int channel;
+static const char *TAG = "AudioConsumer";
 
-static size_t buffersize = 0;
-static void *buffer;
-static SLObjectItf engineObject = NULL;//用SLObjectItf声明引擎接口对象
-static SLEngineItf engineEngine = NULL;//声明具体的引擎对象
-
-
-static SLObjectItf outputMixObject = NULL;//用SLObjectItf创建混音器接口对象
-static SLEnvironmentalReverbItf outputMixEnvironmentalReverb = NULL;////具体的混音器对象实例
-static SLEnvironmentalReverbSettings settings = SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT;//默认情况
+size_t buffer_size = 0;
+void *buffer;
+SLObjectItf engineObject = NULL;//用SLObjectItf声明引擎接口对象
+SLEngineItf engineEngine = NULL;//声明具体的引擎对象
 
 
-static SLObjectItf audioplayer = NULL;//用SLObjectItf声明播放器接口对象
-static SLPlayItf slPlayItf = NULL;//播放器接口
-static SLAndroidSimpleBufferQueueItf slBufferQueueItf = NULL;//缓冲区队列接口
+SLObjectItf outputMixObject = NULL;//用SLObjectItf创建混音器接口对象
+SLEnvironmentalReverbItf outputMixEnvironmentalReverb = NULL;////具体的混音器对象实例
+SLEnvironmentalReverbSettings settings = SL_I3DL2_ENVIRONMENT_PRESET_DEFAULT;//默认情况
 
 
-int createAudioPlayer(int *rate, int *channel, const char *file_name);
+SLObjectItf audioplayer = NULL;//用SLObjectItf声明播放器接口对象
+SLPlayItf slPlayItf = NULL;//播放器接口
+SLAndroidSimpleBufferQueueItf slBufferQueueItf = NULL;//缓冲区队列接口
 
-int releaseAudioPlayer();
+
 
 int getPCM(void **pcm, size_t *pcmSize);
 
 //callback by player
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) {
 
-    buffersize = 0;
+    buffer_size = 0;
 
-    getPCM(&buffer, &buffersize);
-    if (buffer != NULL && buffersize != 0) {
+    getPCM(&buffer, &buffer_size);
+    if (buffer != NULL && buffer_size != 0) {
         //将得到的数据加入到队列中
-        (*slBufferQueueItf)->Enqueue(slBufferQueueItf, buffer, buffersize);
+        (*slBufferQueueItf)->Enqueue(slBufferQueueItf, buffer, buffer_size);
     }
 }
 
 //创建引擎
-void createEngine2() {
+void createEngine() {
     slCreateEngine(&engineObject, 0, NULL, 0, NULL, NULL);//创建引擎
     (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);//实现engineObject接口对象
     (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE,
@@ -58,7 +54,7 @@ void createEngine2() {
 }
 
 //创建混音器
-void createMixVolume2() {
+void createMixVolume() {
     (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 0, 0, 0);//用引擎对象创建混音器接口对象
     (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);//实现混音器接口对象
     SLresult sLresult = (*outputMixObject)->GetInterface(outputMixObject,
@@ -71,7 +67,7 @@ void createMixVolume2() {
     }
 }
 
-void createBufferQueueAudioPlayer2(int bitsPerSample) {
+void createBufferQueueAudioPlayer(int bitsPerSample) {
     /*
    * typedef struct SLDataLocator_AndroidBufferQueue_ {
   SLuint32    locatorType;//缓冲区队列类型
@@ -146,20 +142,20 @@ void createBufferQueueAudioPlayer2(int bitsPerSample) {
 int getPCM(void **pcm, size_t *pcm_size) {
     int frameCount = 0;
     int got_frame;
-    while (av_read_frame(pFormatCtx, packet) >= 0) {
+    while (av_read_frame(format_context, packet) >= 0) {
         if (packet->stream_index == audio_stream_idx) {
 //            解码  mp3   编码格式frame----pcm   frame
-            avcodec_decode_audio4(pCodecCtx, frame, &got_frame, packet);
+            avcodec_decode_audio4(av_codec_context, frame, &got_frame, packet);
             if (got_frame) {
 //                LOGE("解码");
                 /**
                  * int swr_convert(struct SwrContext *s, uint8_t **out, int out_count,
                                 const uint8_t **in , int in_count);
                  */
-                swr_convert(swrContext, &out_buffer, 44100 * 2, (const uint8_t **) frame->data,
+                swr_convert(swr_context, &out_buffer, 44100 * 2, (const uint8_t **) frame->data,
                             frame->nb_samples);
 //                缓冲区的大小
-                int size = av_samples_get_buffer_size(NULL, out_channer_nb, frame->nb_samples,
+                int size = av_samples_get_buffer_size(NULL, out_channel_nb, frame->nb_samples,
                                                       AV_SAMPLE_FMT_S16, 1);
                 *pcm = out_buffer;
                 *pcm_size = size;
@@ -173,18 +169,18 @@ int getPCM(void **pcm, size_t *pcm_size) {
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
 int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
 
-    createEngine2();
-    createMixVolume2();
+    createEngine();
+    createMixVolume();
 
     int result;
     audio_stream_idx = index;
-    pFormatCtx = formatContext;
-    pCodecCtx = pFormatCtx->streams[index]->codec;
-    AVCodec *pCodex = avcodec_find_decoder(pCodecCtx->codec_id);
+    format_context = formatContext;
+    av_codec_context = format_context->streams[index]->codec;
+    AVCodec *pCodex = avcodec_find_decoder(av_codec_context->codec_id);
     if (pCodex == NULL) {
         return VIDEO_ERROR_FIND_DECODER;
     }
-    result = avcodec_open2(pCodecCtx, pCodex, NULL);
+    result = avcodec_open2(av_codec_context, pCodex, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not find audio stream");
         return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
@@ -192,27 +188,26 @@ int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
 
     frame = av_frame_alloc();
     packet = av_packet_alloc();
-    swrContext = swr_alloc();
+    swr_context = swr_alloc();
     //    44100*2
     out_buffer = (uint8_t *) av_malloc(44100 * 2);
     uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
 //    输出采样位数  16位
     enum AVSampleFormat out_formart = AV_SAMPLE_FMT_S16;
 //输出的采样率必须与输入相同
-    int out_sample_rate = pCodecCtx->sample_rate;
+    int out_sample_rate = av_codec_context->sample_rate;
 
 
-    swr_alloc_set_opts(swrContext, out_ch_layout, out_formart, out_sample_rate,
-                       pCodecCtx->channel_layout, pCodecCtx->sample_fmt, pCodecCtx->sample_rate, 0,
+    swr_alloc_set_opts(swr_context, out_ch_layout, out_formart, out_sample_rate,
+                       av_codec_context->channel_layout, av_codec_context->sample_fmt, av_codec_context->sample_rate, 0,
                        NULL);
 
-    swr_init(swrContext);
+    swr_init(swr_context);
 //    获取通道数  2
-    out_channer_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
-    rate = pCodecCtx->sample_rate;
-    channel = pCodecCtx->channels;
-    createBufferQueueAudioPlayer2(SL_PCMSAMPLEFORMAT_FIXED_16);
-
+    out_channel_nb = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
+    rate = av_codec_context->sample_rate;
+    channel = av_codec_context->channels;
+    createBufferQueueAudioPlayer(SL_PCMSAMPLEFORMAT_FIXED_16);
 
     return VIDEO_STATUS_SUCCESS
 
@@ -220,11 +215,11 @@ int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
 
 
 void AudioConsumer::releaseResource() {
-//    swr_free(&swrContext);
-//    av_free(out_buffer);
-//    av_frame_free(&frame);
-//    av_packet_free(&packet);
-//    frame_count = 0;
+    swr_free(&swr_context);
+    av_free(out_buffer);
+    av_frame_free(&frame);
+    av_packet_free(&packet);
+    avformat_close_input(&format_context);
 }
 
 int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,

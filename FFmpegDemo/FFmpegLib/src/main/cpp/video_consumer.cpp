@@ -92,6 +92,7 @@ int VideoConsumer::decodeStream() {
     av_packet_free(&packet);
     ANativeWindow_release(native_window);
     avcodec_close(video_codec_context);
+    avformat_close_input(&format_context);
     return VIDEO_STATUS_SUCCESS
 }
 

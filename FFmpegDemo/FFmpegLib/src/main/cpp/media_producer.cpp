@@ -105,7 +105,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         return status;
     }
 
-    avformat_close_input(&format_context);
+//    avformat_close_input(&format_context);
     env->ReleaseStringUTFChars(javaPath, path);
 
     reset();

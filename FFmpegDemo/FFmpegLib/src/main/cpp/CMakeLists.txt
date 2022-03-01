@@ -50,9 +50,7 @@ add_library(
         media_consumer.cpp
         video_consumer.cpp
         audio_consumer.cpp
-        video_player_listener.cpp
-        FFmpegMusic.cpp
-        thread_helper.cpp)
+        video_player_listener.cpp)
 
 target_link_libraries(
         # Library to link
