@@ -3,6 +3,7 @@
 #include "media_producer.h"
 #include "video_player_listener.h"
 #include "ffmpeg_define.h"
+#include <pthread.h>
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -12,13 +13,25 @@ static const char *const JAVA_HOST_CLASS = "com/chadlin/ffmpeglib/FFmpegVideoMan
 
 static jclass nativeClazz;
 jobject videoCallback;
-jboolean runInThreadNative;
+bool runInThreadNative;
 JavaVM *jvm;
 VideoPlayListener *playListener;
+struct ThreadArgs {
+    void *listener;
+    std::string path;
+    jobject surface;
+};
 
 JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
     std::string hello = avcodec_configuration();
     return env->NewStringUTF(hello.c_str());
+}
+
+void* play(void *args) {
+    auto *threadArgs = static_cast<ThreadArgs *>(args);
+    auto *videoPlayListener = static_cast<VideoPlayListener *>(threadArgs->listener);
+    MediaProducerSingleton::Instance().play(videoPlayListener, threadArgs->path,
+                                            threadArgs->surface);
 }
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
@@ -27,7 +40,16 @@ JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
         //Note that this env could be different everytime call from java side
         playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
     }
-    return MediaProducerSingleton::Instance().play(env, playListener, local_path, surface) >= 0;
+    const char *path = env->GetStringUTFChars(local_path, 0);
+    std::string filePath = std::string(path);
+    auto *threadArgs = new ThreadArgs;
+    threadArgs->listener = playListener;
+    threadArgs->path = filePath;
+    threadArgs->surface = surface;
+    pthread_t pthread1;
+    pthread_create(&pthread1, NULL, play, (void *) threadArgs);
+    env->ReleaseStringUTFChars(local_path, path);
+    return 1;
 }
 
 JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, jobject callback) {
@@ -35,6 +57,7 @@ JNIEXPORT jint JNICALL init(JNIEnv *env, jobject thiz, jboolean runInThread, job
     if (hello.empty()) {
         return INITIALIZE_FAIL
     }
+
     videoCallback = env->NewGlobalRef(callback);
     runInThreadNative = runInThread;
     return INITIALIZE_SUCCEED

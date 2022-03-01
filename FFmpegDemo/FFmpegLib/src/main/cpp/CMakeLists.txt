@@ -46,6 +46,7 @@ add_library(
         SHARED
         # All cpp files to compile
         ffmpeglib.cpp
+        thread_helper.cpp
         media_producer.cpp
         media_consumer.cpp
         video_consumer.cpp

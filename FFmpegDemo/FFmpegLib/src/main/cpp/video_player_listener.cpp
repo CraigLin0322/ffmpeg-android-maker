@@ -5,9 +5,13 @@
 
 #define TAG "video_listener"
 
-VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jboolean runOnThread) {
-    this->vm = vm;
-    this->env = env;
+bool isEnvAttach(JavaVM *vm, JNIEnv *jniEnv) {
+    return vm->GetEnv((void **) &jniEnv, JNI_VERSION_1_4) == JNI_OK;
+}
+
+VideoPlayListener::VideoPlayListener(JavaVM *jvm, JNIEnv *jenv, jobject obj, jboolean runOnThread) {
+    this->vm = jvm;
+    this->env = jenv;
     this->jobj = obj;
     jclass jclazz = env->GetObjectClass(jobj);
     if (!jclazz) {
@@ -33,7 +37,6 @@ VideoPlayListener::VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jbool
     if (!jmethodStartId) {
         LOGE(TAG, "Error on getting jmethodStartId");
     }
-    type = runOnThread ? THREAD_TYPE_ASYNC : THREAD_TYPE_SYNC;
 }
 
 VideoPlayListener::~VideoPlayListener() {
@@ -41,45 +44,45 @@ VideoPlayListener::~VideoPlayListener() {
 }
 
 void VideoPlayListener::onError(int code) const {
-    if (type == THREAD_TYPE_SYNC) {
+    JNIEnv *jniEnv;
+    if (isEnvAttach(vm, jniEnv)) {
         env->CallVoidMethod(jobj, jmethodErrorId, code);
-    } else if (type == THREAD_TYPE_ASYNC) {
-        JNIEnv *jniEnv;
-        vm->AttachCurrentThread(&jniEnv, 0);
+    } else {
+        vm->AttachCurrentThread(&jniEnv, nullptr);
         jniEnv->CallVoidMethod(jobj, jmethodErrorId, code);
         vm->DetachCurrentThread();
     }
 }
 
 void VideoPlayListener::onProgress(int total, int progress) const {
-    if (type == THREAD_TYPE_ASYNC) {
-        JNIEnv *jniEnv;
-        vm->AttachCurrentThread(&jniEnv, 0);
+    JNIEnv *jniEnv;
+    if (isEnvAttach(vm, jniEnv)) {
         env->CallVoidMethod(jobj, jmethodProgressId, total, progress);
+    } else {
+        vm->AttachCurrentThread(&jniEnv, nullptr);
+        jniEnv->CallVoidMethod(jobj, jmethodProgressId, total, progress);
         vm->DetachCurrentThread();
-    } else if (type == THREAD_TYPE_SYNC) {
-        env->CallVoidMethod(jobj, jmethodProgressId, total, progress);
     }
 }
 
 void VideoPlayListener::onStart() const {
-    if (type == THREAD_TYPE_ASYNC) {
-        JNIEnv *jniEnv;
-        vm->AttachCurrentThread(&jniEnv, 0);
+    JNIEnv *jniEnv;
+    if (isEnvAttach(vm, jniEnv)) {
         env->CallVoidMethod(jobj, jmethodStartId);
+    } else {
+        vm->AttachCurrentThread(&jniEnv, nullptr);
+        jniEnv->CallVoidMethod(jobj, jmethodStartId);
         vm->DetachCurrentThread();
-    } else if (type == THREAD_TYPE_SYNC) {
-        env->CallVoidMethod(jobj, jmethodStartId);
     }
 }
 
 void VideoPlayListener::onStop() const {
-    if (type == THREAD_TYPE_ASYNC) {
-        JNIEnv *jniEnv;
-        vm->AttachCurrentThread(&jniEnv, 0);
+    JNIEnv *jniEnv;
+    if (isEnvAttach(vm, jniEnv)) {
         env->CallVoidMethod(jobj, jmethodEndId);
+    } else {
+        vm->AttachCurrentThread(&jniEnv, nullptr);
+        jniEnv->CallVoidMethod(jobj, jmethodEndId);
         vm->DetachCurrentThread();
-    } else if (type == THREAD_TYPE_SYNC) {
-        env->CallVoidMethod(jobj, jmethodEndId);
     }
 }

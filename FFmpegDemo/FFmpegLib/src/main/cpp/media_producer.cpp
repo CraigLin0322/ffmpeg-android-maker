@@ -37,10 +37,10 @@ void MediaProducerSingleton::reset() {
     videoState = VideoState::NOT_STARTED;
 }
 
-int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
+int MediaProducerSingleton::play( VideoPlayListener *listener, const std::string javaPath,
                                  jobject surface) {
     //TODO release resource and reset flags when error happens.
-
+    std::lock_guard<std::mutex> lock(mutex);
     if (videoState != VideoState::NOT_STARTED) {
         listener->onError(VIDEO_DUP_PLAY);
         return VIDEO_STATUS_FAILURE
@@ -48,13 +48,12 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     listener->onStart();
     videoState = VideoState::PLAYING;
     int result;
-    const char *path = env->GetStringUTFChars(javaPath, 0);
     // Register components
     av_register_all();
     // init AVFormatContext
     AVFormatContext *format_context = avformat_alloc_context();
     // Open video files
-    result = avformat_open_input(&format_context, path, NULL, NULL);
+    result = avformat_open_input(&format_context, javaPath.c_str(), NULL, NULL);
     if (result < 0) {
         LOGE(TAG, ": Can not open video file");
         listener->onError(VIDEO_ERROR_OPEN);
@@ -67,6 +66,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM_INFO);
         return VIDEO_STATUS_FAILURE
     }
+    LOGE(TAG, " wwwwwww1");
 
     // Find decoder index
     for (int i = 0; i < format_context->nb_streams; i++) {
@@ -87,7 +87,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
         listener->onError(VIDEO_ERROR_FIND_VIDEO_STREAM);
         return VIDEO_ERROR_FIND_VIDEO_STREAM;
     }
-
+    LOGE(TAG, " wwwwwww2");
     const int succeed = VIDEO_STATUS_SUCCESS;
 
     int status;
@@ -99,6 +99,7 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     if (succeed != status) {
         return status;
     }
+    LOGE(TAG, " wwwwwww3");
 
     status = AudioConsumer::decodeStream();
     if (succeed != status) {
@@ -106,7 +107,6 @@ int MediaProducerSingleton::play(JNIEnv *env, VideoPlayListener *listener, jstri
     }
 
 //    avformat_close_input(&format_context);
-    env->ReleaseStringUTFChars(javaPath, path);
 
     reset();
 

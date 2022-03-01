@@ -16,7 +16,6 @@ public:
     jmethodID jmethodStartId;
     jmethodID jmethodProgressId;
     jmethodID jmethodEndId;
-    int type;
 
 public:
     VideoPlayListener(JavaVM *vm, JNIEnv *env, jobject obj, jboolean runOnThread);

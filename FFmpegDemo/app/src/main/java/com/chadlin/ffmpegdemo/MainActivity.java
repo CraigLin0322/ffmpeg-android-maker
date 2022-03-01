@@ -1,8 +1,5 @@
 package com.chadlin.ffmpegdemo;
 
-import com.chadlin.ffmpeglib.FFmpegVideoManager;
-import com.chadlin.ffmpeglib.VideoPlayerCallback;
-
 import android.Manifest;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
@@ -12,11 +9,14 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.chadlin.ffmpeglib.FFmpegVideoManager;
+import com.chadlin.ffmpeglib.VideoPlayerCallback;
+
+import java.util.List;
 
 /**
  * Token for pushing to Git: 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
@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         textureView = findViewById(R.id.surface);
         textureView.setSurfaceTextureListener(this);
         localVideoDataSource = new LocalVideoDataSource(this);
-        FFmpegVideoManager.getInstance().initialize(false, new VideoPlayerCallback() {
+        FFmpegVideoManager.getInstance().initialize(true, new VideoPlayerCallback() {
             @Override
             public void onVideoStart() {
                 Log.e(TAG, "onVideoStart");
@@ -84,18 +84,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                Toast.makeText(this, FFmpegVideoManager.getInstance().testConnection(), Toast.LENGTH_SHORT).show();
                 break;
             case R.id.tv_play:
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        List<VideoItem> list = null;
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                            list = readVideoFromLocal();
-                            VideoItem item = list.get(0);
-                            FFmpegVideoManager.getInstance().playVideo(item.path, new Surface(surface));
-                        }
-
-                    }
-                }).start();
+                List<VideoItem> list = null;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    list = readVideoFromLocal();
+                    VideoItem item = list.get(0);
+                    FFmpegVideoManager.getInstance().playVideo(item.path, new Surface(surface));
+                }
                 break;
         }
     }

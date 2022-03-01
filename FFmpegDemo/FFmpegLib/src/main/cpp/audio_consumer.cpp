@@ -2,7 +2,7 @@
 
 using namespace AudioConsumer;
 
-AVFormatContext *format_context;
+AVFormatContext *formatContext;
 AVCodecContext *av_codec_context;
 AVPacket *packet;
 AVFrame *frame;
@@ -142,7 +142,7 @@ void createBufferQueueAudioPlayer(int bitsPerSample) {
 int getPCM(void **pcm, size_t *pcm_size) {
     int frameCount = 0;
     int got_frame;
-    while (av_read_frame(format_context, packet) >= 0) {
+    while (av_read_frame(formatContext, packet) >= 0) {
         if (packet->stream_index == audio_stream_idx) {
 //            解码  mp3   编码格式frame----pcm   frame
             avcodec_decode_audio4(av_codec_context, frame, &got_frame, packet);
@@ -167,15 +167,15 @@ int getPCM(void **pcm, size_t *pcm_size) {
 }
 
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
-int AudioConsumer::initResource(AVFormatContext *formatContext, int index) {
+int AudioConsumer::initResource(AVFormatContext *context, int index) {
 
     createEngine();
     createMixVolume();
 
     int result;
     audio_stream_idx = index;
-    format_context = formatContext;
-    av_codec_context = format_context->streams[index]->codec;
+    formatContext = context;
+    av_codec_context = formatContext->streams[index]->codec;
     AVCodec *pCodex = avcodec_find_decoder(av_codec_context->codec_id);
     if (pCodex == NULL) {
         return VIDEO_ERROR_FIND_DECODER;
@@ -219,7 +219,7 @@ void AudioConsumer::releaseResource() {
     av_free(out_buffer);
     av_frame_free(&frame);
     av_packet_free(&packet);
-    avformat_close_input(&format_context);
+    avformat_close_input(&formatContext);
 }
 
 int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,

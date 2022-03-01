@@ -3,6 +3,7 @@
 
 #include "video_consumer.h"
 #include "audio_consumer.h"
+#include "mutex"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,7 @@ public:
     MediaProducerSingleton &operator=(MediaProducerSingleton &&) = delete;      // Move assign
 
     // Any other public methods.
-    int play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath, jobject surface);
+    int play( VideoPlayListener *listener, const std::string javaPath, jobject surface);
 
     void seekTo(JNIEnv *env, jlong position);
 
@@ -62,6 +63,7 @@ protected:
     AVCodec *audio_codec;
     ANativeWindow *native_window;
     SwrContext *swrContext;
+    std::mutex mutex;
 
 
     MediaProducerSingleton() {
