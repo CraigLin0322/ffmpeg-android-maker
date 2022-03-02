@@ -64,12 +64,15 @@ protected:
     ANativeWindow *native_window;
     SwrContext *swrContext;
     std::mutex mutex;
+    AudioConsumer *audioConsumer;
 
 
     MediaProducerSingleton() {
+        audioConsumer = new AudioConsumer();
     }
 
     ~MediaProducerSingleton() {
+        delete audioConsumer;
     }
 
     // And any other protected methods.

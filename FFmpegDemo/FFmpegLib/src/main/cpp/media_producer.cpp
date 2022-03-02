@@ -95,13 +95,13 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
 //    if (succeed != status) {
 //        return status;
 //    }
-    status = AudioConsumer::initResource(format_context, audio_stream_index);
+    status = audioConsumer->initResource(format_context, audio_stream_index);
     if (succeed != status) {
         return status;
     }
     LOGE(TAG, " wwwwwww3");
 
-    status = AudioConsumer::decodeStream();
+    status = audioConsumer->decodeStream();
     if (succeed != status) {
         return status;
     }
