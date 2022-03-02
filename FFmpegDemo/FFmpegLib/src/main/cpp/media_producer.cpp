@@ -37,7 +37,7 @@ void MediaProducerSingleton::reset() {
     videoState = VideoState::NOT_STARTED;
 }
 
-int MediaProducerSingleton::play( VideoPlayListener *listener, const std::string javaPath,
+int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string javaPath,
                                  jobject surface) {
     //TODO release resource and reset flags when error happens.
     std::lock_guard<std::mutex> lock(mutex);
@@ -95,23 +95,23 @@ int MediaProducerSingleton::play( VideoPlayListener *listener, const std::string
 //    if (succeed != status) {
 //        return status;
 //    }
-//    status = AudioConsumer::initResource(format_context, audio_stream_index);
-//    if (succeed != status) {
-//        return status;
-//    }
-//    LOGE(TAG, " wwwwwww3");
-//
-//    status = AudioConsumer::decodeStream();
-//    if (succeed != status) {
-//        return status;
-//    }
-//
+    status = AudioConsumer::initResource(format_context, audio_stream_index);
+    if (succeed != status) {
+        return status;
+    }
+    LOGE(TAG, " wwwwwww3");
+
+    status = AudioConsumer::decodeStream();
+    if (succeed != status) {
+        return status;
+    }
+
 //    avformat_close_input(&format_context);
 //
     reset();
 
     listener->onStop();
 
-    return VIDEO_STATUS_SUCCESS
-}
+    return VIDEO_STATUS_SUCCESS;
 
+}
