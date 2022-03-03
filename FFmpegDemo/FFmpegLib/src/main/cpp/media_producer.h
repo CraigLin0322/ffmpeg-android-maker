@@ -45,7 +45,7 @@ public:
     MediaProducerSingleton &operator=(MediaProducerSingleton &&) = delete;      // Move assign
 
     // Any other public methods.
-    int play( VideoPlayListener *listener, const std::string javaPath, jobject surface);
+    int play(VideoPlayListener *listener, const std::string javaPath, ANativeWindow *nativeWindow);
 
     void seekTo(JNIEnv *env, jlong position);
 
@@ -65,14 +65,16 @@ protected:
     SwrContext *swrContext;
     std::mutex mutex;
     AudioConsumer *audioConsumer;
-
+    VideoConsumer *videoConsumer;
 
     MediaProducerSingleton() {
+        videoConsumer = new VideoConsumer();
         audioConsumer = new AudioConsumer();
     }
 
     ~MediaProducerSingleton() {
         delete audioConsumer;
+        delete videoConsumer;
     }
 
     // And any other protected methods.

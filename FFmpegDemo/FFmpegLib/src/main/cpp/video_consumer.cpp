@@ -1,16 +1,7 @@
 #include "video_consumer.h"
 
-using namespace VideoConsumer;
-static const char *TAG = "VideoConsumer";
 
-int videoHeight;
-int videoWidth;
-ANativeWindow *native_window;
-AVCodecContext *video_codec_context;
-AVFormatContext *format_context;
-AVCodec *video_codec;
-int playRate = 1;
-int video_stream_index = -1;
+static const char *TAG = "VideoConsumer";
 
 int VideoConsumer::decodeStream() {
     int result;
@@ -104,8 +95,8 @@ void VideoConsumer::pause(JNIEnv *env) {
 
 }
 
-int VideoConsumer::initResource(AVFormatContext *formatContext, int index, JNIEnv *env,
-                                jobject surface) {
+int VideoConsumer::initResource(AVFormatContext *formatContext, int index,
+                                ANativeWindow *window) {
     int result = VIDEO_STATUS_FAILURE;
     format_context = formatContext;
     video_stream_index = index;
@@ -124,7 +115,7 @@ int VideoConsumer::initResource(AVFormatContext *formatContext, int index, JNIEn
     videoWidth = video_codec_context->width;
 
     // Init ANativeWindow
-    native_window = ANativeWindow_fromSurface(env, surface);
+    native_window = window;
     if (native_window == NULL) {
         LOGE(TAG, " : Can not create native window");
         return VIDEO_ERROR_CREATE_NATIVE_WINDOW;

@@ -3,22 +3,33 @@
 
 #include "media_consumer.h"
 
-namespace VideoConsumer {
-    int decodeStream() ;
+class VideoConsumer {
+public:
+
+    int videoHeight;
+    int videoWidth;
+    ANativeWindow *native_window;
+    AVCodecContext *video_codec_context;
+    AVFormatContext *format_context;
+    AVCodec *video_codec;
+    int playRate = 1;
+    int video_stream_index = -1;
+
+    int decodeStream();
 
     int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface) ;
+             jstring javaPath, jobject surface);
 
-    void seekTo(JNIEnv *env, jlong position) ;
+    void seekTo(JNIEnv *env, jlong position);
 
-    void pause(JNIEnv *env)  ;
+    void pause(JNIEnv *env);
 
-    void resume(JNIEnv *env)  ;
+    void resume(JNIEnv *env);
 
-    void releaseResource() ;
+    void releaseResource();
 
     int
-    initResource(AVFormatContext *format_context, int stream_index, JNIEnv *env, jobject surface);
-}
+    initResource(AVFormatContext *format_context, int stream_index, ANativeWindow *window);
+};
 
 #endif // __VIDEO_CONSUMER_H__

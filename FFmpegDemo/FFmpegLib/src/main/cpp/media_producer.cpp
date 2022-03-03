@@ -38,7 +38,7 @@ void MediaProducerSingleton::reset() {
 }
 
 int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string javaPath,
-                                 jobject surface) {
+                                 ANativeWindow * nativeWindow) {
     //TODO release resource and reset flags when error happens.
     std::lock_guard<std::mutex> lock(mutex);
     if (videoState != VideoState::NOT_STARTED) {
@@ -91,17 +91,16 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
     const int succeed = VIDEO_STATUS_SUCCESS;
 
     int status;
-//            VideoConsumer::initResource(format_context, video_stream_index, env, surface);
-//    if (succeed != status) {
-//        return status;
-//    }
-    status = audioConsumer->initResource(format_context, audio_stream_index);
+    status = videoConsumer->initResource(format_context, video_stream_index, nativeWindow);
     if (succeed != status) {
         return status;
     }
-    LOGE(TAG, " wwwwwww3");
-
-    status = audioConsumer->decodeStream();
+    status = videoConsumer->decodeStream();
+//    status = audioConsumer->initResource(format_context, audio_stream_index);
+//    if (succeed != status) {
+//        return status;
+//    }
+//    status = audioConsumer->decodeStream();
     if (succeed != status) {
         return status;
     }

@@ -19,7 +19,7 @@ VideoPlayListener *playListener;
 struct ThreadArgs {
     void *listener;
     std::string path;
-    jobject surface;
+    ANativeWindow *nativeWindow;
 };
 
 JNIEXPORT jstring JNICALL pinService(JNIEnv *env, jobject /* this */) {
@@ -31,9 +31,10 @@ void* play(void *args) {
     auto *threadArgs = static_cast<ThreadArgs *>(args);
     auto *videoPlayListener = static_cast<VideoPlayListener *>(threadArgs->listener);
     MediaProducerSingleton::Instance().play(videoPlayListener, threadArgs->path,
-                                            threadArgs->surface);
+                                            threadArgs->nativeWindow);
     pthread_exit((void *) 2);
 }
+
 
 JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
                                           jstring local_path, jobject surface) {
@@ -41,12 +42,16 @@ JNIEXPORT jboolean JNICALL playLocalVideo(JNIEnv *env, jobject thiz,
         //Note that this env could be different everytime call from java side
         playListener = new VideoPlayListener(jvm, env, videoCallback, runInThreadNative);
     }
+    ANativeWindow *newWindow = ANativeWindow_fromSurface(env, surface);
+    if (newWindow == nullptr) {
+        return 0;
+    }
     const char *path = env->GetStringUTFChars(local_path, 0);
     std::string filePath = std::string(path);
     auto *threadArgs = new ThreadArgs;
     threadArgs->listener = playListener;
     threadArgs->path = filePath;
-    threadArgs->surface = surface;
+    threadArgs->nativeWindow = newWindow;
     pthread_t pthread1;
     pthread_create(&pthread1, NULL, play, (void *) threadArgs);
     env->ReleaseStringUTFChars(local_path, path);

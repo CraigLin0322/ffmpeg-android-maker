@@ -6,7 +6,6 @@
 #include "cstring"
 #include "SLES/OpenSLES.h"
 #include "SLES/OpenSLES_Android.h"
-static const char *TAG = "AudioConsumer";
 
 class AudioConsumer {
 
