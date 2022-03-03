@@ -153,7 +153,6 @@ int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
 
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
 int AudioConsumer::initResource(MediaContext* mediaContext) {
-
     createEngine(this);
     createMixVolume(this);
 
@@ -207,17 +206,12 @@ void AudioConsumer::releaseResource() {
     avformat_close_input(&formatContext);
 }
 
-int AudioConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
-                        jobject surface) {
-
-}
 
 void AudioConsumer::seekTo(JNIEnv *env, jlong position) {
 
 }
 
-
-int AudioConsumer::decodeStream() {
+int AudioConsumer::play() {
 //    bqPlayerCallback(bqPlayerBufferQueue, nullptr);
     return VIDEO_STATUS_SUCCESS
 }

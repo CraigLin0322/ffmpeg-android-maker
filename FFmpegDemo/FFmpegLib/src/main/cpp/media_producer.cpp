@@ -12,6 +12,7 @@
 //https://blog.csdn.net/JohanMan/article/details/83091706
 
 
+
 void MediaProducerSingleton::pause(JNIEnv *env) {
     if (videoState == VideoState::PLAYING) {
 
@@ -96,16 +97,38 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
     mediaContext->stream_video_index = video_stream_index;
     mediaContext->stream_audio_index = audio_stream_index;
     mediaContext->nativeWindow = nativeWindow;
+
+    AVPacket *packet = av_packet_alloc();
+    AVCodecContext *audioCodecContext = format_context->streams[audio_stream_index]->codec;
+    AVCodecContext *videoCodecContext = format_context->streams[video_stream_index]->codec;
+
+    while (videoState == VideoState::PLAYING) {
+        if (av_read_frame(format_context, packet) == 0) {
+            if (packet->stream_index == audio_stream_index) {
+                audioConsumer->put(packet);
+            } else if (packet->stream_index == video_stream_index) {
+                videoConsumer->put(packet);
+            }
+
+            //TODO consider video is over but audio hasn't yet.
+        } else{
+
+        }
+        av_packet_unref(packet);
+    }
+
+    av_free_packet(packet);
+    avformat_free_context(format_context);
     status = videoConsumer->initResource(mediaContext);
     if (succeed != status) {
         return status;
     }
-    status = videoConsumer->decodeStream();
+    status = videoConsumer->play();
 //    status = audioConsumer->initResource(format_context, audio_stream_index);
 //    if (succeed != status) {
 //        return status;
 //    }
-//    status = audioConsumer->decodeStream();
+//    status = audioConsumer->play();
     if (succeed != status) {
         return status;
     }

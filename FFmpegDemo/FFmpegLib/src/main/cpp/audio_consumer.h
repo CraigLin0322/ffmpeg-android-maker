@@ -7,7 +7,7 @@
 #include "SLES/OpenSLES.h"
 #include "SLES/OpenSLES_Android.h"
 
-class AudioConsumer :MediaConsumer {
+class AudioConsumer : public MediaConsumer {
 
 public:
     AVFormatContext *formatContext;
@@ -36,21 +36,17 @@ public:
     SLPlayItf slPlayItf = NULL;//播放器接口
     SLAndroidSimpleBufferQueueItf slBufferQueueItf = NULL;//缓冲区队列接口
 
+    int play() override;
 
-    int decodeStream();
+    void seekTo(JNIEnv *env, jlong position) override;
 
-    int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface);
+    void pause(JNIEnv *env) override;
 
-    void seekTo(JNIEnv *env, jlong position);
+    void resume(JNIEnv *env) override;
 
-    void pause(JNIEnv *env);
+    void releaseResource() override;
 
-    void resume(JNIEnv *env);
-
-    void releaseResource();
-
-    int initResource(MediaContext *mediaContext);
+    int initResource(MediaContext *mediaContext) override;
 
     AudioConsumer();
 

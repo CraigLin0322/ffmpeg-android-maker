@@ -3,7 +3,7 @@
 
 #include "media_consumer.h"
 
-class VideoConsumer : MediaConsumer {
+class VideoConsumer : public MediaConsumer {
 public:
 
     int videoHeight;
@@ -15,20 +15,17 @@ public:
     int playRate = 1;
     int video_stream_index = -1;
 
-    int decodeStream();
+    int play() override;
 
-    int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface);
+    void seekTo(JNIEnv *env, jlong position) override;
 
-    void seekTo(JNIEnv *env, jlong position);
+    void pause(JNIEnv *env) override;
 
-    void pause(JNIEnv *env);
+    void resume(JNIEnv *env) override;
 
-    void resume(JNIEnv *env);
+    void releaseResource() override;
 
-    void releaseResource();
-
-    int initResource(MediaContext *mediaContext);
+    int initResource(MediaContext *mediaContext) override;
 
     VideoConsumer();
 

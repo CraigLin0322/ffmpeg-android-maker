@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "ffmpeg_define.h"
+#include "queue"
+#include "vector"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,39 +28,59 @@ extern "C" {
 #endif
 
 struct MediaContext {
-    ANativeWindow * nativeWindow;
-    AVFormatContext * formatContext;
+    ANativeWindow *nativeWindow;
+    AVFormatContext *formatContext;
     int stream_video_index;
     int stream_audio_index;
 };
+
 class MediaConsumer {
 public:
-    MediaConsumer(){
+    std::vector<AVPacket *> packetQueue;
+    pthread_t pthread;
+
+    MediaConsumer() {
 
     }
 
-    ~MediaConsumer(){
+    ~MediaConsumer() {
 
     }
 
-    int put(AVPacket *packet);
+    int put(AVPacket *packet) {
+        AVPacket *vaPacket = av_packet_alloc();
+        if (av_packet_ref(vaPacket, packet)) {
+            //Fail in clone ref
+            return 0;
+        }
+        packetQueue.push_back(vaPacket);
+        return 1;
+    }
 
-    int get(AVPacket *packet);
+    int get(AVPacket *packet) {
+        if (!packetQueue.empty()) {
+            if (av_packet_ref(packet, packetQueue.front())) {
+                return 0;
+            }
+            AVPacket *front = packetQueue.front();
+            packetQueue.erase(packetQueue.begin());
+            av_free(front);
+        }
+        return 1;
+    }
 
-    int decodeStream() ;
+    virtual int play() = 0;
 
-    int play(JNIEnv *env, VideoPlayListener *listener,
-             jstring javaPath, jobject surface);
+    virtual void seekTo(JNIEnv *env, jlong position) = 0;
 
-    void seekTo(JNIEnv *env, jlong position);
+    virtual void pause(JNIEnv *env) = 0;
 
-    void pause(JNIEnv *env);
+    virtual void resume(JNIEnv *env) = 0;
 
-    void resume(JNIEnv *env);
+    virtual void releaseResource() = 0;
 
-    void releaseResource();
+    virtual int initResource(MediaContext *context) = 0;
 
-    int initResource(MediaContext *mediaContext);
 };
 
 #endif // __MEDIA_CONSUMER_H__
