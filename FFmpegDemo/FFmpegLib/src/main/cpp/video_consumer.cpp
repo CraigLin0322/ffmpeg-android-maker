@@ -95,11 +95,10 @@ void VideoConsumer::pause(JNIEnv *env) {
 
 }
 
-int VideoConsumer::initResource(AVFormatContext *formatContext, int index,
-                                ANativeWindow *window) {
+int VideoConsumer::initResource(MediaContext* mediaContext) {
     int result = VIDEO_STATUS_FAILURE;
-    format_context = formatContext;
-    video_stream_index = index;
+    format_context = mediaContext->formatContext;
+    video_stream_index = mediaContext->stream_video_index;
 
     video_codec_context = format_context->streams[video_stream_index]->codec;
     video_codec = avcodec_find_decoder(video_codec_context->codec_id);
@@ -115,7 +114,7 @@ int VideoConsumer::initResource(AVFormatContext *formatContext, int index,
     videoWidth = video_codec_context->width;
 
     // Init ANativeWindow
-    native_window = window;
+    native_window = mediaContext->nativeWindow;
     if (native_window == NULL) {
         LOGE(TAG, " : Can not create native window");
         return VIDEO_ERROR_CREATE_NATIVE_WINDOW;
@@ -137,9 +136,17 @@ void VideoConsumer::releaseResource() {
 
 int VideoConsumer::play(JNIEnv *env, VideoPlayListener *listener, jstring javaPath,
                         jobject surface) {
-
+    return 0;
 }
 
 void VideoConsumer::seekTo(JNIEnv *env, jlong position) {
+
+}
+
+VideoConsumer::VideoConsumer() {
+
+}
+
+VideoConsumer::~VideoConsumer() {
 
 }

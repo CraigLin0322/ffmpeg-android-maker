@@ -48,7 +48,6 @@ add_library(
         ffmpeglib.cpp
         thread_helper.cpp
         media_producer.cpp
-        media_consumer.cpp
         video_consumer.cpp
         audio_consumer.cpp
         video_player_listener.cpp)

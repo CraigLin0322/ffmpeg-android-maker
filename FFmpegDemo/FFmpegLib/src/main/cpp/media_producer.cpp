@@ -91,7 +91,12 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
     const int succeed = VIDEO_STATUS_SUCCESS;
 
     int status;
-    status = videoConsumer->initResource(format_context, video_stream_index, nativeWindow);
+    auto *mediaContext = new MediaContext;
+    mediaContext->formatContext = format_context;
+    mediaContext->stream_video_index = video_stream_index;
+    mediaContext->stream_audio_index = audio_stream_index;
+    mediaContext->nativeWindow = nativeWindow;
+    status = videoConsumer->initResource(mediaContext);
     if (succeed != status) {
         return status;
     }

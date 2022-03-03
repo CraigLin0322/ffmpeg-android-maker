@@ -152,15 +152,14 @@ int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
 }
 
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
-int AudioConsumer::initResource(AVFormatContext *context, int index) {
+int AudioConsumer::initResource(MediaContext* mediaContext) {
 
     createEngine(this);
     createMixVolume(this);
 
     int result;
-    audio_stream_idx = index;
-    formatContext = context;
-    av_codec_context = formatContext->streams[index]->codec;
+    formatContext = mediaContext->formatContext;
+    av_codec_context = formatContext->streams[mediaContext->stream_audio_index]->codec;
     AVCodec *pCodex = avcodec_find_decoder(av_codec_context->codec_id);
     if (pCodex == NULL) {
         return VIDEO_ERROR_FIND_DECODER;
@@ -228,5 +227,13 @@ void AudioConsumer::resume(JNIEnv *env) {
 }
 
 void AudioConsumer::pause(JNIEnv *env) {
+
+}
+
+AudioConsumer::AudioConsumer() {
+
+}
+
+AudioConsumer::~AudioConsumer() {
 
 }

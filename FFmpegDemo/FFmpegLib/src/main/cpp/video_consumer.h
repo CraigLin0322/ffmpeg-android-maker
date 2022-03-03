@@ -3,7 +3,7 @@
 
 #include "media_consumer.h"
 
-class VideoConsumer {
+class VideoConsumer : MediaConsumer {
 public:
 
     int videoHeight;
@@ -28,8 +28,11 @@ public:
 
     void releaseResource();
 
-    int
-    initResource(AVFormatContext *format_context, int stream_index, ANativeWindow *window);
+    int initResource(MediaContext *mediaContext);
+
+    VideoConsumer();
+
+    ~VideoConsumer();
 };
 
 #endif // __VIDEO_CONSUMER_H__

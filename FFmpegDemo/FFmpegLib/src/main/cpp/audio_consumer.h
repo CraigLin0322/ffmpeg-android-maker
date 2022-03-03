@@ -7,7 +7,7 @@
 #include "SLES/OpenSLES.h"
 #include "SLES/OpenSLES_Android.h"
 
-class AudioConsumer {
+class AudioConsumer :MediaConsumer {
 
 public:
     AVFormatContext *formatContext;
@@ -50,8 +50,11 @@ public:
 
     void releaseResource();
 
-    int initResource(AVFormatContext *formatContext, int index);
+    int initResource(MediaContext *mediaContext);
 
+    AudioConsumer();
+
+    ~AudioConsumer();
 
 };
 

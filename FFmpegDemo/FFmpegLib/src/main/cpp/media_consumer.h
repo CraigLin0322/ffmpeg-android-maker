@@ -25,6 +25,40 @@ extern "C" {
 }
 #endif
 
+struct MediaContext {
+    ANativeWindow * nativeWindow;
+    AVFormatContext * formatContext;
+    int stream_video_index;
+    int stream_audio_index;
+};
+class MediaConsumer {
+public:
+    MediaConsumer(){
 
+    }
+
+    ~MediaConsumer(){
+
+    }
+
+    int put(AVPacket *packet);
+
+    int get(AVPacket *packet);
+
+    int decodeStream() ;
+
+    int play(JNIEnv *env, VideoPlayListener *listener,
+             jstring javaPath, jobject surface);
+
+    void seekTo(JNIEnv *env, jlong position);
+
+    void pause(JNIEnv *env);
+
+    void resume(JNIEnv *env);
+
+    void releaseResource();
+
+    int initResource(MediaContext *mediaContext);
+};
 
 #endif // __MEDIA_CONSUMER_H__
