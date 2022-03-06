@@ -11,6 +11,8 @@
 #include "ffmpeg_define.h"
 #include "queue"
 #include "vector"
+#include <pthread.h>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +70,7 @@ public:
         }
         return 1;
     }
+
 
     virtual int play() = 0;
 

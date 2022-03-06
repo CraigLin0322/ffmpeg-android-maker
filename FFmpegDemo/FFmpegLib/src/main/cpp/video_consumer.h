@@ -27,6 +27,7 @@ public:
 
     int initResource(MediaContext *mediaContext) override;
 
+
     VideoConsumer();
 
     ~VideoConsumer();

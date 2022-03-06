@@ -48,6 +48,7 @@ public:
 
     int initResource(MediaContext *mediaContext) override;
 
+
     AudioConsumer();
 
     ~AudioConsumer();

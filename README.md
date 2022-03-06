@@ -15,7 +15,8 @@ For CMakeLists.txt, refer https://proandroiddev.com/a-story-about-ffmpeg-in-andr
 - Integrate FFmpeg into Android. [Done]
 - Video play based on FFmpeg. [Done]
 - Video play callback [Done]
-- Audio play based on OpenGL ES.
+- Audio play based on OpenGL ES. [Done]
+- Model ofr consumer and producer
 - Synchronize track of video and audio.
 - Video play [Done]
 - Video pause

@@ -3,9 +3,14 @@
 
 static const char *TAG = "VideoConsumer";
 
-int VideoConsumer::play() {
+void * loopFrames(void * args) {
+    auto *consumer = static_cast<VideoConsumer *>(args);
     int result;
-
+    int videoHeight = consumer->videoHeight;
+    int videoWidth = consumer->videoWidth;
+    auto *video_codec_context = consumer->video_codec_context;
+    auto *format_context = consumer->format_context;
+    auto *native_window = consumer->native_window;
     ANativeWindow_Buffer window_buffer;
     // 声明数据容器 有3个
     // R5 解码前数据容器 Packet 编码数据
@@ -36,7 +41,7 @@ int VideoConsumer::play() {
     double timestamp = 0l;
     int finish = 0;
     // Read frame
-    while (get(packet)) {
+    while (consumer->get(packet)) {
         avcodec_decode_video2(video_codec_context, frame, &finish,
                               packet);
         if (finish) {
@@ -49,13 +54,13 @@ int VideoConsumer::play() {
                     rgba_frame->data, rgba_frame->linesize);
             if (result <= 0) {
                 LOGE("Player Error ", ": data convert fail");
-                return VIDEO_ERROR_CONVERT_DATA;
+                pthread_exit((void *) 2);
             }
             // play
             result = ANativeWindow_lock(native_window, &window_buffer, NULL);
             if (result < 0) {
                 LOGE(TAG, " : Can not lock native window");
-                return VIDEO_ERROR_LOCK_NATIVE_WINDOW;
+                pthread_exit((void *) 2);
             } else {
                 // 将图像绘制到界面上
                 // 注意 : 这里 rgba_frame 一行的像素和 window_buffer 一行的像素长度可能不一致
@@ -82,6 +87,11 @@ int VideoConsumer::play() {
     ANativeWindow_release(native_window);
     avcodec_close(video_codec_context);
     avformat_close_input(&format_context);
+    pthread_exit((void *) 2);
+}
+
+int VideoConsumer::play() {
+    pthread_create(&pthread, NULL, loopFrames, this);
     return VIDEO_STATUS_SUCCESS
 }
 
