@@ -116,8 +116,7 @@ void createBufferQueueAudioPlayer(AudioConsumer *consumer, int bitsPerSample) {
     //播放
     (*consumer->slPlayItf)->SetPlayState(consumer->slPlayItf, SL_PLAYSTATE_PLAYING);
 
-    //开始播放
-    bqPlayerCallback(consumer->slBufferQueueItf, consumer);
+
 //    return result;
 }
 
@@ -213,6 +212,8 @@ void AudioConsumer::seekTo(JNIEnv *env, jlong position) {
 
 int AudioConsumer::play() {
 //    bqPlayerCallback(bqPlayerBufferQueue, nullptr);
+    //开始播放
+    bqPlayerCallback(slBufferQueueItf, this);
     return VIDEO_STATUS_SUCCESS
 }
 

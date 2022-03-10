@@ -50,6 +50,7 @@ add_library(
         media_producer.cpp
         video_consumer.cpp
         audio_consumer.cpp
+        safe_queue.cpp
         video_player_listener.cpp)
 
 target_link_libraries(

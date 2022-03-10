@@ -12,6 +12,7 @@
 #include "queue"
 #include "vector"
 #include <pthread.h>
+#include "safe_queue.h"
 
 
 #ifdef __cplusplus
@@ -38,7 +39,7 @@ struct MediaContext {
 
 class MediaConsumer {
 public:
-    std::vector<AVPacket *> packetQueue;
+    SafeQueue<AVPacket *> packetQueue;
     pthread_t pthread;
 
     MediaConsumer() {
@@ -55,19 +56,16 @@ public:
             //Fail in clone ref
             return 0;
         }
-        packetQueue.push_back(vaPacket);
+        packetQueue.enqueue(vaPacket);
         return 1;
     }
 
     int get(AVPacket *packet) {
-        if (!packetQueue.empty()) {
-            if (av_packet_ref(packet, packetQueue.front())) {
-                return 0;
-            }
-            AVPacket *front = packetQueue.front();
-            packetQueue.erase(packetQueue.begin());
-            av_free(front);
+        AVPacket *front =packetQueue.dequeue();
+        if (av_packet_ref(packet, front)) {
+            return 0;
         }
+        av_free(front);
         return 1;
     }
 
