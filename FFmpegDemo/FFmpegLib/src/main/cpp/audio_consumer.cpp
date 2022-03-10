@@ -1,20 +1,20 @@
 #include "audio_consumer.h"
 
 static const char *TAG = "AudioConsumer";
-
-int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size);
+static const int BUFFER_SIZE = 44100 * 2;
+int getPCM(AudioConsumer *consumer);
 
 //callback by player
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *context) {
 
     auto *consumer = static_cast<AudioConsumer *>(context);
-    consumer->buffer_size = 0;
 
-    getPCM(consumer, &consumer->buffer, &consumer->buffer_size);
-    if (consumer->buffer != NULL && consumer->buffer_size != 0) {
-        //将得到的数据加入到队列中
+    int size = getPCM(consumer);
+    if (consumer->buffer != NULL && size != 0) {
+        double time = size / (BUFFER_SIZE * 2);
+        consumer->clock += time;
         (*consumer->slBufferQueueItf)->Enqueue(consumer->slBufferQueueItf, consumer->buffer,
-                                               consumer->buffer_size);
+                                               size);
     }
 }
 
@@ -24,20 +24,18 @@ void * loopAudioFrames(void * args) {
     pthread_exit((void *) 2);
 }
 
-//创建引擎
 void createEngine(AudioConsumer *consumer) {
     slCreateEngine(&consumer->engineObject, 0, NULL, 0, NULL, NULL);//创建引擎
     (*consumer->engineObject)->Realize(consumer->engineObject,
-                                       SL_BOOLEAN_FALSE);//实现engineObject接口对象
+                                       SL_BOOLEAN_FALSE);
     (*consumer->engineObject)->GetInterface(consumer->engineObject, SL_IID_ENGINE,
-                                            &consumer->engineEngine);//通过引擎调用接口初始化SLEngineItf
+                                            &consumer->engineEngine);
 }
 
-//创建混音器
 void createMixVolume(AudioConsumer *consumer) {
     (*consumer->engineEngine)->CreateOutputMix(consumer->engineEngine, &consumer->outputMixObject,
-                                               0, 0, 0);//用引擎对象创建混音器接口对象
-    (*consumer->outputMixObject)->Realize(consumer->outputMixObject, SL_BOOLEAN_FALSE);//实现混音器接口对象
+                                               0, 0, 0);
+    (*consumer->outputMixObject)->Realize(consumer->outputMixObject, SL_BOOLEAN_FALSE);
     SLresult sLresult = (*consumer->outputMixObject)->GetInterface(consumer->outputMixObject,
                                                                    SL_IID_ENVIRONMENTALREVERB,
                                                                    &consumer->outputMixEnvironmentalReverb);//利用混音器实例对象接口初始化具体的混音器对象
@@ -126,13 +124,18 @@ void createBufferQueueAudioPlayer(AudioConsumer *consumer, int bitsPerSample) {
 //    return result;
 }
 
-int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
+int getPCM(AudioConsumer *consumer) {
     int frameCount = 0;
     int got_frame;
+    void **pcm =&consumer->buffer ;
+    int size = 0;
     AVPacket *packet = av_packet_alloc();
     AVFrame *frame = av_frame_alloc();
     while (consumer->get(packet)) {
         if (packet->stream_index == consumer->audio_stream_index) {
+            if (packet->pts != AV_NOPTS_VALUE) {
+                consumer->clock = av_q2d(consumer->av_codec_context->time_base) * packet->pts;
+            }
             avcodec_decode_audio4(consumer->av_codec_context, frame, &got_frame,
                                   packet);
             if (got_frame) {
@@ -140,21 +143,20 @@ int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
                  * int swr_convert(struct SwrContext *s, uint8_t **out, int out_count,
                                 const uint8_t **in , int in_count);
                  */
-                swr_convert(consumer->swr_context, &consumer->out_buffer, 44100 * 2,
+                swr_convert(consumer->swr_context, &consumer->out_buffer, BUFFER_SIZE,
                             (const uint8_t **) frame->data,
                             frame->nb_samples);
-                int size = av_samples_get_buffer_size(NULL, consumer->out_channel_nb,
+                size = av_samples_get_buffer_size(NULL, consumer->out_channel_nb,
                                                       frame->nb_samples,
                                                       AV_SAMPLE_FMT_S16, 1);
                 *pcm = consumer->out_buffer;
-                *pcm_size = size;
                 break;
             }
         }
     }
     av_free(packet);
     av_frame_free(&frame);
-    return 0;
+    return size;
 }
 
 //https://github.com/xufuji456/FFmpegAndroid/blob/master/app/src/main/cpp/opensl_audio_player.cpp
@@ -177,8 +179,7 @@ int AudioConsumer::initResource(MediaContext* mediaContext) {
     }
 
     swr_context = swr_alloc();
-    //    44100*2
-    out_buffer = (uint8_t *) av_malloc(44100 * 2);
+    out_buffer = (uint8_t *) av_malloc(BUFFER_SIZE);
     uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
 //    输出采样位数  16位
     enum AVSampleFormat out_formart = AV_SAMPLE_FMT_S16;

@@ -18,8 +18,7 @@ public:
     int audio_stream_index = -1;
     int rate;
     int channel;
-
-    size_t buffer_size = 0;
+    double clock;
     void *buffer;
     SLObjectItf engineObject = NULL;//用SLObjectItf声明引擎接口对象
     SLEngineItf engineEngine = NULL;//声明具体的引擎对象
