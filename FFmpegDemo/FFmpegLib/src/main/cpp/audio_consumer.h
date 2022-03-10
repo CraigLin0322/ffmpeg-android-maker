@@ -12,12 +12,10 @@ class AudioConsumer : public MediaConsumer {
 public:
     AVFormatContext *formatContext;
     AVCodecContext *av_codec_context;
-    AVPacket *packet;
-    AVFrame *frame;
     SwrContext *swr_context;
     uint8_t *out_buffer;
     int out_channel_nb;
-    int audio_stream_idx = -1;
+    int audio_stream_index = -1;
     int rate;
     int channel;
 

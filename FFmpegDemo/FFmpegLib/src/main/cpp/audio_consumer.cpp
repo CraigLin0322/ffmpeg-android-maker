@@ -18,6 +18,12 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueueItf, void *contex
     }
 }
 
+void * loopAudioFrames(void * args) {
+    auto *consumer = static_cast<AudioConsumer *>(args);
+    bqPlayerCallback(consumer->slBufferQueueItf, consumer);
+    pthread_exit((void *) 2);
+}
+
 //创建引擎
 void createEngine(AudioConsumer *consumer) {
     slCreateEngine(&consumer->engineObject, 0, NULL, 0, NULL, NULL);//创建引擎
@@ -123,23 +129,22 @@ void createBufferQueueAudioPlayer(AudioConsumer *consumer, int bitsPerSample) {
 int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
     int frameCount = 0;
     int got_frame;
-    while (av_read_frame(consumer->formatContext, consumer->packet) >= 0) {
-        if (consumer->packet->stream_index == consumer->audio_stream_idx) {
-//            解码  mp3   编码格式frame----pcm   frame
-            avcodec_decode_audio4(consumer->av_codec_context, consumer->frame, &got_frame,
-                                  consumer->packet);
+    AVPacket *packet = av_packet_alloc();
+    AVFrame *frame = av_frame_alloc();
+    while (consumer->get(packet)) {
+        if (packet->stream_index == consumer->audio_stream_index) {
+            avcodec_decode_audio4(consumer->av_codec_context, frame, &got_frame,
+                                  packet);
             if (got_frame) {
-//                LOGE("解码");
                 /**
                  * int swr_convert(struct SwrContext *s, uint8_t **out, int out_count,
                                 const uint8_t **in , int in_count);
                  */
                 swr_convert(consumer->swr_context, &consumer->out_buffer, 44100 * 2,
-                            (const uint8_t **) consumer->frame->data,
-                            consumer->frame->nb_samples);
-//                缓冲区的大小
+                            (const uint8_t **) frame->data,
+                            frame->nb_samples);
                 int size = av_samples_get_buffer_size(NULL, consumer->out_channel_nb,
-                                                      consumer->frame->nb_samples,
+                                                      frame->nb_samples,
                                                       AV_SAMPLE_FMT_S16, 1);
                 *pcm = consumer->out_buffer;
                 *pcm_size = size;
@@ -147,6 +152,8 @@ int getPCM(AudioConsumer *consumer, void **pcm, size_t *pcm_size) {
             }
         }
     }
+    av_free(packet);
+    av_frame_free(&frame);
     return 0;
 }
 
@@ -158,6 +165,7 @@ int AudioConsumer::initResource(MediaContext* mediaContext) {
     int result;
     formatContext = mediaContext->formatContext;
     av_codec_context = formatContext->streams[mediaContext->stream_audio_index]->codec;
+    audio_stream_index = mediaContext->stream_audio_index;
     AVCodec *pCodex = avcodec_find_decoder(av_codec_context->codec_id);
     if (pCodex == NULL) {
         return VIDEO_ERROR_FIND_DECODER;
@@ -168,8 +176,6 @@ int AudioConsumer::initResource(MediaContext* mediaContext) {
         return VIDEO_ERROR_FIND_VIDEO_STREAM_INFO;
     }
 
-    frame = av_frame_alloc();
-    packet = av_packet_alloc();
     swr_context = swr_alloc();
     //    44100*2
     out_buffer = (uint8_t *) av_malloc(44100 * 2);
@@ -200,8 +206,6 @@ int AudioConsumer::initResource(MediaContext* mediaContext) {
 void AudioConsumer::releaseResource() {
     swr_free(&swr_context);
     av_free(out_buffer);
-    av_frame_free(&frame);
-    av_packet_free(&packet);
     avformat_close_input(&formatContext);
 }
 
@@ -211,9 +215,8 @@ void AudioConsumer::seekTo(JNIEnv *env, jlong position) {
 }
 
 int AudioConsumer::play() {
-//    bqPlayerCallback(bqPlayerBufferQueue, nullptr);
     //开始播放
-    bqPlayerCallback(slBufferQueueItf, this);
+    pthread_create(&pthread, NULL, loopAudioFrames, this);
     return VIDEO_STATUS_SUCCESS
 }
 

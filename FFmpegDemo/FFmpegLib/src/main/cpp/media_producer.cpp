@@ -103,12 +103,12 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
     if (succeed != status) {
         return status;
     }
-//    status = audioConsumer->initResource(mediaContext);
-//    if (succeed != status) {
-//        return status;
-//    }
+    status = audioConsumer->initResource(mediaContext);
+    if (succeed != status) {
+        return status;
+    }
     videoConsumer->play();
-//    audioConsumer->play();
+    audioConsumer->play();
     while (videoState == VideoState::PLAYING) {
         if (av_read_frame(format_context, packet) == 0) {
             if (packet->stream_index == audio_stream_index) {
@@ -126,11 +126,6 @@ int MediaProducerSingleton::play(VideoPlayListener *listener, const std::string 
 
     av_free_packet(packet);
     avformat_free_context(format_context);
-//    status = audioConsumer->initResource(format_context, audio_stream_index);
-//    if (succeed != status) {
-//        return status;
-//    }
-//    status = audioConsumer->play();
     if (succeed != status) {
         return status;
     }
